@@ -1,43 +1,56 @@
-# CardioLens · 心电节律智能分析软件
+# CardioLens · 心电节律智能分析平台
 
-> **ECG Rhythm Intelligent Analysis Software**
+> **ECG Rhythm Intelligent Analysis Platform**
 >
-> 基于深度学习与可解释 AI 的 **Windows 桌面软件** —— 一维卷积神经网络（1D-CNN）心电搏动自动分类与 Grad-CAM 可解释性分析
+> 基于深度学习与可解释 AI 的 **Web 应用** —— 一维卷积神经网络（1D-CNN）心电搏动自动分类与 Grad-CAM 可解释性分析
 >
-> 界面：**PySide6 / Qt Widgets 原生桌面 GUI** · 数据集：MIT-BIH Arrhythmia Database（PhysioNet mitdb） · 分类标准：AAMI EC57 五分类
+> 前端：**Vue 3 + 原生 Canvas 2D** · 后端：**Flask + Waitress** · 数据集：MIT-BIH Arrhythmia Database（PhysioNet mitdb） · 分类标准：AAMI EC57 五分类
 >
 > ![Python](https://img.shields.io/badge/Python-3.10%2B-3776ab)
 > ![PyTorch](https://img.shields.io/badge/PyTorch-2.x%20CPU-ee4c2c)
-> ![PySide6](https://img.shields.io/badge/PySide6-Qt%20Widgets-41cd52)
-> ![Platform](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078d4)
-> ![License](https://img.shields.io/badge/用途-课程作业演示-important)
+> ![Flask](https://img.shields.io/badge/Flask-3.x-000000)
+> ![Vue](https://img.shields.io/badge/Vue-3.x%20(%E6%97%A0%E6%9E%84%E5%BB%BA)-42b883)
+> ![License](https://img.shields.io/badge/%E7%94%A8%E9%80%94-%E8%AF%BE%E7%A8%8B%E4%BD%9C%E4%B8%9A%E6%BC%94%E7%A4%BA-important)
 
 ---
 
 ## ⚠️ 重要声明
 
-**本软件为软件工程课程作业演示项目，不是医疗器械，也不是临床诊断工具。**
+**本系统为软件工程课程作业演示项目，不是医疗器械，也不是临床诊断工具。**
 
 > 以上结果由机器学习模型自动生成，仅用于课程项目演示与辅助分析，不构成医疗诊断依据，不能用于任何临床决策。如有健康问题请及时就医。
 
-该声明在软件的**首页、分析结果页与关于页**均显著展示，不可关闭、不可隐藏。
+该声明在**首页、分析结果页与关于页**均显著展示，并在页脚常驻，不可关闭、不可隐藏。
 
 ---
 
 ## 一、项目简介
 
 心电信号（ECG）是临床上最基础、最普及的心脏检查手段之一。一次 24 小时动态心电监测会产生约 **10 万次心搏**，
-而专业医师人工判读耗时且存在主观差异。本项目实现了一套**可在普通笔记本（纯 CPU）上完整运行**的心电搏动自动分析软件：
+而专业医师人工判读耗时且存在主观差异。本项目实现了一套**可在普通笔记本（纯 CPU）上完整运行**的心电搏动自动分析服务：
 
 - 读取 MIT-BIH 心律失常数据库的真实心电记录
 - 对信号做带通滤波与逐搏切分，按 **AAMI EC57 标准**归类为 5 类心搏
 - 用 **1D-CNN** 逐搏分类，输出每一搏的类别与置信度
 - 用 **Grad-CAM** 给出模型关注的时间片段，回答"模型凭什么这么判断"
-- 在**原生 Windows 桌面界面**中完成"选记录 → 看波形 → 跑分析 → 读结果 → 存历史"的完整操作闭环
+- 在**浏览器**中完成"选记录 → 看波形 → 跑分析 → 读结果 → 存历史"的完整操作闭环
 
-> **这是一个真正的桌面软件，不是"把网页封装成 EXE"。**
-> 界面由 Qt Widgets 原生控件构成，波形由 `QPainter` 逐点绘制，分析跑在 `QThread` 后台线程上。
-> 全程**离线**：不需要浏览器、不需要本机服务器、不需要 localhost，进程内不创建任何监听套接字。
+### 关于交付形态：从桌面回到 Web
+
+本项目上一版是 PySide6 桌面程序（单文件 EXE，双击即用）。本次改为 **Web 服务**，原因是：
+
+| 驱动力 | 说明 |
+|---|---|
+| **免安装分发** | 使用者只需要一个浏览器。不必下载 300 MB 的 EXE，也不受操作系统限制 |
+| **多用户与隔离** | 服务端一份部署即可供多人同时使用，每人的分析历史互相不可见 |
+| **迭代成本** | 界面改一行不必重新打包、重新分发、重新让人下载 |
+
+**这次迁移没有改动任何 AI 逻辑。** `src/` 中的模型结构、训练流程、Grad-CAM、信号处理一行未改——
+只替换了表现层。这正好验证了"推理引擎与界面解耦"这件事的实际价值：
+从桌面到 Web、从单机到多用户，引擎侧只动了数据库的会话隔离与一处缓存上限。
+
+> 上一版（桌面版）的完整代码仍在 git 历史中，可用
+> `git checkout pre-web-migration -- desktop/` 取回。
 
 ### 分类目标（AAMI EC57 五分类）
 
@@ -53,62 +66,50 @@
 
 ## 二、功能特性
 
-侧边导航固定为四项：**首页 / ECG 分析 / 分析历史 / 关于**。
+顶栏固定为四项：**首页 / ECG 分析 / 分析历史 / 关于**。单页应用，视图间无刷新切换。
 
-| 页面 | 功能 |
+| 视图 | 功能 |
 |---|---|
-| 🏠 首页 | 项目介绍、模型关键指标、数据集概览、操作流程指引、就绪状态、医学免责声明 |
-| 📊 ECG 分析 | 记录选择（标注推荐记录）、时间窗与时长调节、波形预览、一键分析；分析期间按钮变为"分析中…"并显示进度条，界面不卡死 |
-| 🫀 波形可视化 | `QPainter` 自绘心电条带：心电网格、坐标轴、R 峰标注、异常搏动高亮、鼠标滚轮缩放、拖动平移；Grad-CAM 热力图叠加 |
-| 🔍 逐搏分析 | 逐搏结果表（序号 / 位置 / 预测类别 / 置信度），选中任意一搏联动查看单搏波形、五类概率与 RR 节律特征 |
-| 🔥 可解释性 | Grad-CAM 热力图（252 点，与心搏采样点严格对齐），展示模型决策时关注的心电片段 |
-| 💾 结果保存 | 一键保存报告到本机 SQLite；分析历史页支持列表、详情回看、单条删除与清空（均带确认弹窗） |
-| 🏷️ 划分提示 | 自动标注该记录属于训练集还是测试集；训练集记录会明确警告"一致率偏高、不能当作泛化能力"，避免把演示效果误读为模型真实水平 |
-| 📖 关于页 | 数据来源、AAMI 五分类定义、模型结构、训练设置、测试集性能、Grad-CAM 原理、已知限制与运行环境 |
-| 🛡️ 异常兜底 | 任何异常都以友好中文弹窗呈现（"模型加载失败""ECG 数据加载失败""分析失败""历史记录读取失败"），详细堆栈写入日志文件，**用户永远看不到 traceback** |
+| 🏠 首页 | 项目介绍、模型关键指标、数据集概览、系统就绪状态、医学免责声明 |
+| 📊 ECG 分析 | 记录选择（标注推荐记录）、时间窗与时长调节、波形预览、一键分析；分析期间显示不确定进度条，页面全程可滚动可切换 |
+| 🫀 波形可视化 | Canvas 自绘心电条带：心电网格与坐标轴刻度、R 峰标注、异常搏动高亮、**滚轮缩放、拖拽平移、双击复位、悬停十字线读数**；Grad-CAM 热力图叠加 |
+| 🔍 逐搏分析 | 逐搏结果表（序号 / 位置 / 预测类别 / 置信度 / 专家标注 / 是否一致），点击任意一搏联动查看单搏波形、五类概率与 RR 节律特征 |
+| 🔥 可解释性 | Grad-CAM 热力图（252 点，与心搏采样点严格对齐），以填充面积图呈现模型关注的时间片段 |
+| 💾 结果保存 | 一键保存报告到服务端 SQLite；历史页支持列表、详情回看、单条删除与清空（均带确认） |
+| 🏷️ 划分提示 | 自动标注该记录属于训练集还是测试集；训练集记录会明确警告"一致率偏高、不能当作泛化能力" |
+| 🔒 会话隔离 | 分析历史与本浏览器绑定：看不到别人的记录，别人也看不到你的 |
+| 📱 响应式 | 桌面与移动端视口均可正常使用 |
+| 🛡️ 异常兜底 | 任何异常都以友好中文提示呈现，详细堆栈只写服务端日志，**使用者永远看不到 traceback** |
 
 ---
 
 ## 三、快速开始
 
-### 3.1 直接使用（推荐）
+### 3.1 访问已部署的服务（使用者）
 
-1. 把 `dist\CardioLens.exe` 复制到任意目录（**可以单独一个文件存在，不需要附带任何其他文件**）
-2. 双击运行
-
-就这么两步。目标机器**不需要**安装 Python、pip、Node、npm，**不需要**联网，**不需要**启动任何服务，
-也**不需要**命令行操作或配置环境变量。
+打开浏览器访问部署地址即可。**客户端不需要安装任何东西**，也不需要联网加载第三方 CDN
+（前端依赖随服务端分发）。
 
 | 项目 | 要求 |
 |---|---|
-| 操作系统 | Windows 10 / 11（64 位） |
-| 运行环境 | 无（EXE 自带 Python 运行时与全部依赖） |
-| 网络 | 不需要，全程离线 |
-| 首次启动 | 自动创建数据目录 `%LOCALAPPDATA%\CardioLens\`（存放数据库与日志） |
-| 启动耗时 | 视机器性能，通常数秒；状态栏依次显示"正在加载模型……"→"系统就绪" |
+| 浏览器 | 任意现代浏览器（Chrome / Edge / Firefox / Safari 近两年的版本） |
+| 客户端依赖 | 无 |
+| 本地数据 | 无。分析历史保存在服务端 |
 
-> **验证状态**：本 EXE 已在"**空目录 + 只有一个 EXE + 最小环境变量 + 清空用户数据**"
-> 的条件下实测启动成功（见 `PROJECT_REPORT.md` 10.2 与 12.1.1）——即脱离项目目录、
-> 脱离 `PATH` 中的 Python 与第三方依赖、脱离既有用户数据后仍能正常运行。
-> 若你在新机器上遇到问题，请把 `%LOCALAPPDATA%\CardioLens\logs\cardiolens.log`
-> 的内容反馈出来，日志里有完整堆栈。
+> **关于分析历史**：本平台没有账号体系，历史记录用浏览器标识区分。
+> 因此**换一台设备、或清除浏览器数据之后，原记录将无法在此浏览器中访问**
+> （数据仍在服务端，只是没有入口）。这一点在界面上也有明确提示。
 
-程序运行期间产生的可写数据只有两处，都在用户目录下，卸载时直接删除该目录即可：
-
-```
-%LOCALAPPDATA%\CardioLens\
-├── app.db                 # 分析历史数据库（SQLite）
-└── logs\cardiolens.log    # 运行日志（出现异常时的详细堆栈写在这里）
-```
-
-### 3.2 从源码运行（开发/调试）
+### 3.2 本地运行
 
 ```bash
 pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
-python desktop/main.py
+python wsgi.py
 ```
 
-桌面端入口是 **`desktop/main.py`**。程序内**不包含 `app.run()`**，不会启动任何 Web 服务。
+打开 `http://127.0.0.1:5000`。
+
+首次启动会自动建库并把模型加载进内存（约 3 秒），日志中会打印监听地址与数据目录。
 
 ### 3.3 重新训练模型 / 重建数据集（可选，日常使用不需要）
 
@@ -119,61 +120,141 @@ python desktop/main.py
 # 第 1 步：下载并预处理 MIT-BIH 数据（约 87 MB，首次约 1~3 分钟）
 python -m src.prepare_data
 
-# 第 2 步：训练模型（纯 CPU 实测 18.3 分钟；产出 models/ecg_cnn.pt 与独立的 models/metrics.json）
+# 第 2 步：训练模型（纯 CPU 实测 18.3 分钟；产出 models/ecg_cnn.pt 与 models/metrics.json）
 python -m src.train
 ```
 
 > ⚠️ 重新训练会覆盖 `models/ecg_cnn.pt`。当前权重是已验证版本，**请勿随意替换**。
 
-### 3.4 打包成单文件 EXE
+### 3.4 部署到服务器
+
+#### 环境变量
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CARDIOLENS_ENV` | `development` | **生产环境必须设为 `production`**，否则使用开发用固定密钥 |
+| `CARDIOLENS_SECRET_KEY` | 无 | **生产环境必填**。用于签名会话 Cookie，**必须保持稳定**——一旦改变，所有使用者的历史入口会立即失效 |
+| `CARDIOLENS_STORE` | 代码目录下的 `store/` | 可写数据目录（SQLite 与日志）。建议指到持久化卷，使代码目录可以整体只读 |
+| `CARDIOLENS_HOST` / `CARDIOLENS_PORT` | `127.0.0.1` / `5000` | 监听地址。生产环境应只监听回环，由反向代理对外 |
+| `CARDIOLENS_THREADS` | `4` | WSGI 工作线程数 |
+| `CARDIOLENS_MAX_CONCURRENT` | `4` | 同时允许排队的分析请求数上限 |
+| `CARDIOLENS_SLOT_TIMEOUT` | `8.0` | 等待并发槽位的秒数，超时返回 503 |
+| `CARDIOLENS_TORCH_THREADS` | `1` | PyTorch 线程数。**不要调大**，见下方"并发"说明 |
+
+生成密钥：
 
 ```bash
-pip install pyinstaller
-pyinstaller CardioLens.spec --noconfirm
+python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
-产物为 `dist/CardioLens.exe`（单文件、无控制台窗口）。打包配置刻意**不使用 `--collect-all`**，
-而是在 `CardioLens.spec` 中显式列出"只读资源"与"明确排除"两份清单，避免把 TensorFlow、
-WebEngine 等无关依赖卷进包里。
+#### systemd 单元示例
+
+```ini
+[Unit]
+Description=CardioLens ECG Analysis Platform
+After=network.target
+
+[Service]
+User=cardiolens
+WorkingDirectory=/srv/cardiolens
+Environment=CARDIOLENS_ENV=production
+Environment=CARDIOLENS_SECRET_KEY=<你的密钥>
+Environment=CARDIOLENS_STORE=/var/lib/cardiolens
+Environment=CARDIOLENS_HOST=127.0.0.1
+Environment=CARDIOLENS_PORT=8001
+Environment=OMP_NUM_THREADS=1
+Environment=MKL_NUM_THREADS=1
+ExecStart=/srv/cardiolens/.venv/bin/python /srv/cardiolens/wsgi.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+> **⚠️ 为什么 `ExecStart` 用 `python wsgi.py` 而不是 `waitress-serve wsgi:app`**
+>
+> `waitress-serve` 是 waitress 自带的命令行入口，它**只认自己的 `--host` / `--port` 参数**，
+> 不读 `CARDIOLENS_HOST` / `CARDIOLENS_PORT` 环境变量。写成
+> `ExecStart=... waitress-serve --threads=4 wsgi:app` 会静默地使用 waitress 的默认值，
+> **监听在 `0.0.0.0:8080`** —— 一方面 nginx 转发到 `127.0.0.1:8001` 会连不上，
+> 另一方面应用会直接暴露在所有网卡上，绕过下面"只监听回环"的设计。
+>
+> 若确实想用命令行入口，必须把监听地址显式写全：
+> `waitress-serve --host=127.0.0.1 --port=8001 --threads=4 wsgi:app`。
+> `python wsgi.py` 则直接读取上表的环境变量，是更不容易出错的方式。
+
+#### nginx 反向代理要点
+
+```nginx
+upstream cardiolens { server 127.0.0.1:8001; }
+
+server {
+    listen 443 ssl http2;
+    server_name your.domain;
+    # ssl_certificate ... 略
+
+    # 本站没有任何上传功能，请求体不到 1 KB
+    client_max_body_size 128k;
+
+    location /static/ {
+        alias /srv/cardiolens/web/static/;
+        expires 7d;
+        add_header Cache-Control "public";
+    }
+
+    location / {
+        proxy_pass http://cardiolens;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        # 这一行不可少：缺了它 Flask 会以为请求是 http，
+        # 导致 SESSION_COOKIE_SECURE 的 Cookie 根本发不出去
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+
+    gzip on;
+    gzip_types application/json text/css application/javascript;
+    gzip_min_length 1024;          # 30 秒窗口的响应约 163 KB，压缩比约 3~4 倍
+
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
+```
+
+> **CSP 说明**：前端使用 Vue 的运行时模板编译（这是"免构建"的代价），因此需要
+> `script-src 'self' 'unsafe-eval'`。为配合这一点，前端**硬性禁止使用 `v-html`**，
+> 所有服务端文本一律走 `{{ }}` 由 Vue 自动转义；测试里有对应的静态审计用例。
+
+#### 为什么必须单进程多线程
+
+限流计数器与并发信号量都是**进程内**状态。开多个 worker 会：
+
+- 让限额按 worker 数放大，保护措施形同虚设
+- 每个 worker 独立加载一份 PyTorch 与模型，内存成倍上涨
+
+而单次分析实测只有 0.24~0.46 秒，单进程多线程的吞吐已经远超课程演示场景的需要。
+因此**不要用 `gunicorn -w 4`**，也不要用 waitress 之外的进程模型。
 
 ### 3.5 验证
 
 ```bash
-python scripts/test_desktop.py    # 桌面端自测：就绪检查、产物校验、推理一致性、Grad-CAM、
-                                  # 数据库、GUI 构建、线程化分析、离线扫描等，共 73 个用例
-python scripts/selftest.py        # 【旧 Web 版接口自测】针对已退役的 Flask 实现，仅作留档对照
+python scripts/test_web.py        # 离线自测（Flask test_client），144 个断言
+python scripts/test_web_e2e.py    # 端到端（真实 HTTP + 真实 waitress 进程），69 个断言
+python scripts/screenshot.py      # 重新生成界面截图到 docs/screenshots_web/
 ```
 
-实测输出：**`test_desktop.py` 73 / 73 全部通过，0 失败**；`models/` 下的三个受保护产物
-MD5 与基线一致，未被任何修改触碰。
+两套测试实测 **144 / 144** 与 **69 / 69 全部通过**。端到端脚本会自己拉起一个 waitress 进程，
+并把可写数据目录指向临时位置，**不会污染真实数据库**。
 
-打包之后还可以再验证一次"冻结运行时里真的能跑分析"（这一步需要重新打包，可选）：
+### 3.6 运维工具
 
 ```bash
-pyinstaller CardioLensSelfTest.spec --noconfirm --distpath dist_selftest --workpath build_selftest
-dist_selftest\CardioLensSelfTest.exe --out frozen_report.json
+python scripts/migrate_owner.py --status    # 查看无归属的历史记录与全站概况
+python scripts/prune_db.py --status         # 查看数据库占用
+python scripts/prune_db.py --keep 50        # 每个会话只保留最近 50 条
 ```
-
-`CardioLensSelfTest.exe` **不是产品的一部分**，它只做验收：复用与产品完全相同的资源清单，
-在冻结环境里跑三个时间窗并输出逐搏概率、Grad-CAM 长度、数据库读写结果，
-可与开发机基准逐项对照（本次交付保留的报告见 `docs/test_evidence/frozen_report.json`）。
-最后一步的"独立运行测试"是手工动作：
-把 `dist\CardioLens.exe` **单独**拷到一个空目录，双击运行，确认状态栏显示「系统就绪」。
-
-### 3.6 Windows 常见问题
-
-| 现象 | 原因与解决办法 |
-|---|---|
-| 首次双击弹出"Windows 已保护你的电脑" | 这是 SmartScreen 对**未做代码签名**的自制程序的默认提示。点击"更多信息"→"仍要运行"即可。本项目为课程作业，未购买代码签名证书。 |
-| 分析结果里出现"本记录属于训练集"的黄色警告 | **这不是错误**，是刻意的诚实提示。该记录（如 208）属于训练集 DS1，模型训练时见过该患者，逐搏一致率会偏高。想看真实的跨患者表现，请选测试集记录（如 **100 / 200 / 232 / 233**）。 |
-| 想找回历史报告 | 报告保存在 `%LOCALAPPDATA%\CardioLens\app.db`。程序内「分析历史」页可查看、删除、清空。 |
-| 程序无法启动 / 界面显示"安装文件不完整" | EXE 被损坏或被裁剪。请重新复制完整的 `CardioLens.exe`（约 309 MB）。 |
-| 分析时界面卡住不动 | 不应发生——分析在后台线程执行，界面期间仍可响应。若真有此现象，请把 `%LOCALAPPDATA%\CardioLens\logs\cardiolens.log` 提供给开发者。 |
-| 需要看详细错误 | 打开 `%LOCALAPPDATA%\CardioLens\logs\cardiolens.log`，里面有完整的信息与堆栈。 |
-| `pip` 安装 torch 极慢或超时 | 用 CPU 专用源装轻量版：`pip install torch --index-url https://download.pytorch.org/whl/cpu` |
-
-> **关于虚拟环境**：从源码运行时推荐使用 `python -m venv .venv` 创建独立环境后再 `pip install`，
-> 避免与系统其他 Python 包冲突；激活命令为 `.venv\Scripts\activate`。
 
 ---
 
@@ -181,15 +262,28 @@ dist_selftest\CardioLensSelfTest.exe --out frozen_report.json
 
 ```
 medicalAI/
-├── desktop/                    # ★ 桌面软件（PySide6 / Qt Widgets）
-│   ├── main.py                 #   程序入口：初始化 Qt → 用户目录 → 数据库 → 加载模型 → 显示主窗口
-│   ├── app.py                  #   主窗口：侧边导航 + QStackedWidget 页面栈 + 全局异常钩子
-│   ├── theme.py                #   视觉规范：配色、字体与全局 QSS
-│   ├── pages/                  #   首页 / 分析 / 结果 / 历史 / 关于
-│   ├── widgets/                #   通用组件：卡片、指标块、类别徽标、构成条、波形绘制控件
-│   └── services/               #   资源路径与就绪检查、后台分析线程、历史记录读写
+├── wsgi.py                     # ★ 生产入口：app = create_app()
 │
-├── src/                        # ★ AI 推理引擎（桌面端与旧 Web 版共用，本次迁移未修改）
+├── web/                        # ★ Web 应用
+│   ├── __init__.py             #   应用工厂：装配、注册蓝图、错误处理
+│   ├── config.py               #   配置：会话 Cookie 策略、并发与限流阈值（均可用环境变量覆盖）
+│   ├── session.py              #   会话标识：签名 Cookie 里的随机 owner
+│   ├── guard.py                #   请求守卫：限流、并发槽位、Content-Type 校验
+│   ├── readiness.py            #   就绪检查与指标/元信息加载
+│   ├── bootstrap.py            #   启动装配：日志、线程数、数据库、模型热身
+│   ├── errors.py               #   统一错误响应：接口一律 JSON，用户永远看不到堆栈
+│   ├── views/                  #   蓝图：状态/记录/分析/历史/图表/SPA 壳
+│   ├── templates/index.html    #   SPA 壳（内联首屏数据，深链不白屏）
+│   └── static/
+│       ├── css/app.css         #   样式表
+│       ├── vendor/             #   Vue 3 与 vue-router（本地分发，不走 CDN）
+│       └── js/
+│           ├── main.js  router.js  api.js  store.js  format.js
+│           ├── wave/           #   viewport(视图区间数学) / render(绘制) / interaction(交互)
+│           ├── components/     #   EcgStrip BeatChart BeatTable ResultPanel 等
+│           └── views/          #   首页 / 分析 / 历史 / 历史详情 / 关于
+│
+├── src/                        # ★ AI 推理引擎（与界面完全解耦）
 │   ├── config.py               #   全局配置：路径、信号参数、AAMI 映射、RR 特征定义、免责声明
 │   ├── prepare_data.py         #   数据下载 → 带通滤波 → R 峰对齐切分 → beats.npz
 │   ├── rr.py                   #   RR 间期特征计算（训练与推理共用，杜绝特征漂移）
@@ -197,49 +291,40 @@ medicalAI/
 │   ├── train.py                #   训练脚本：类权重、数据增强、早停、评估、绘图
 │   ├── gradcam.py              #   Grad-CAM 可解释性（1D 信号版本）
 │   ├── inference.py            #   推理服务：窗口校验、逐搏预测、RR 明细、风险分级
-│   └── db.py                   #   SQLite 历史记录持久化（表结构与迁移前完全一致）
-│
-├── CardioLens.spec             # PyInstaller 打包配置（单文件、无控制台）
-├── legacy_web/                 # 旧 Web 版实现（已退役，仅供留档，绝不参与桌面软件运行）
-│   ├── app.py                  #   原 Flask 入口（仅可用 python -m legacy_web.app 手动启动）
-│   ├── templates/
-│   └── static/
+│   └── db.py                   #   SQLite 持久化：按会话隔离、自愈式 schema 迁移
 │
 ├── scripts/
-│   ├── test_desktop.py         # ★ 桌面端自测（73 个用例）
-│   ├── capture_desktop.py      #   桌面端界面截图（生成 docs/screenshots_desktop/）
-│   ├── frozen_selftest.py      # 【验收用】冻结运行时自检，不在产品内
-│   ├── selftest.py             # 【旧 Web 版接口自测】留档对照
-│   └── screenshot.py           # 【旧 Web 版截图脚本】留档对照
+│   ├── test_web.py             # ★ 离线自测（144 个断言）
+│   ├── test_web_e2e.py         # ★ 端到端测试（真实 HTTP + 真实 WSGI）
+│   ├── screenshot.py           #   界面截图（生成 docs/screenshots_web/）
+│   ├── migrate_owner.py        #   处理无归属的遗留历史记录
+│   └── prune_db.py             #   数据库清理
 │
 ├── data/                       # 数据目录
-│   ├── raw/hf/mitdb.parquet    #   原始数据
+│   ├── raw/hf/mitdb.parquet    #   原始数据（可由 prepare_data 重新下载，不纳入版本控制）
 │   └── processed/
-│       ├── beats.npz           #   切分好的心搏张量 (N, 252) 与标签（训练用，不随 EXE 分发）
+│       ├── beats.npz           #   切分好的心搏张量 (N, 252) 与标签（仅训练需要）
 │       ├── record_meta.json    #   各记录元信息
 │       ├── signals/            #   滤波后完整信号（推理时读取）
 │       └── annots/             #   专家标注（用于与模型结果对照）
 │
 ├── models/                     # 训练产物
-│   ├── ecg_cnn.pt              #   模型权重（当前使用，103,109 参数）
+│   ├── ecg_cnn.pt              #   模型权重（103,109 参数）
 │   ├── metrics.json            #   测试集指标（由实际测试集计算）
 │   ├── confusion_matrix.png    #   混淆矩阵
 │   ├── training_curve.png      #   训练曲线
-│   ├── train_run4.log          #   最终版训练完整日志
-│   ├── train_run2.log          #   早期版本训练日志
-│   ├── train_run3.log          #   早期版本训练日志
-│   ├── _train.log              #   首版训练日志
+│   ├── train_run2/3/4.log      #   训练日志（过程记录）
 │   └── archive/                #   历史版本留存（早期无 RR 分支的模型与指标）
 │
-├── store/app.db                # 源码运行模式下的 SQLite 数据库（打包后改用 %LOCALAPPDATA%）
+├── store/                      # 运行时数据（数据库与日志，不纳入版本控制）
 └── docs/
-    ├── screenshots_desktop/    # ★ 桌面端界面截图（当前交付形态，由 capture_desktop.py 生成）
-    ├── screenshots_legacy_web/ #   旧 Web 版界面截图（已退役，仅供留档对照）
-    └── test_evidence/          #   测试证据（冻结运行时自检报告）
+    ├── screenshots_web/        # ★ Web 版界面截图（22 张）
+    └── desktop_era_evidence.md #   桌面版时代的产物与验收证据留存
 ```
 
-> **`legacy_web/` 不参与桌面软件运行**：`desktop/` 中没有任何一行代码 import 它，
-> `CardioLens.spec` 也把它整个排除在包外。
+> **运行时最小部署集**：`web/` + `src/` + `models/` + `data/processed/{signals,annots,record_meta.json}`，
+> 合计约 **115 MB**。**不需要** `data/processed/beats.npz`（91 MB，仅训练用）与 `data/raw/`。
+> 就绪检查刻意不要求前者——否则只部署运行最小集时整个应用会表现为不可用。
 
 ---
 
@@ -330,15 +415,50 @@ Grad-CAM 将分类头对特征图的梯度在时间维取平均作为通道权�
 Grad-CAM 只解释波形分支，不参与推理：热力图在推理完成后单独计算，**不影响分类结果**；
 即使计算失败，分析流程也不会中断（仅不显示热力图）。
 
-### 5.6 桌面端架构要点
+### 5.6 Web 架构要点
 
 | 关键点 | 做法 | 原因 |
 |---|---|---|
-| **界面不卡死** | 模型加载与分析全部放进 `QThread`，通过信号回传结果与异常 | 单次分析含逐搏 Grad-CAM，CPU 上需数秒；放主线程会冻结窗口 |
-| **只读资源路径** | 统一的资源根函数：开发时为项目根目录，打包后为 `sys._MEIPASS` | 两种运行方式共用同一套代码 |
-| **可写数据路径** | 数据库与日志固定写到 `%LOCALAPPDATA%\CardioLens\` | `sys._MEIPASS` 是临时解压目录，程序退出即被清理，**绝不能写**；程序目录可能无写权限 |
-| **波形绘制** | `QPainter` 自绘：网格、坐标轴、R 峰标记、异常搏动高亮、Grad-CAM 叠加 | 原生绘制，无 HTML Canvas、无 JS、无 WebEngine |
-| **数据库** | 沿用原有 `src/db.py` 的表结构与索引，仅落地路径改为用户目录 | 表结构不做任何变更 |
+| **会话隔离** | 用 Flask 的签名 Cookie 保存一个 256 位随机标识，历史记录按它过滤 | 无需账号体系即可让多人各看各的；签名 Cookie 本身就是 itsdangerous 签名过的凭据，零存储、零清理任务 |
+| **越权不可探测** | 访问非本人的记录返回 404 而不是 403 | 403 会泄露"这个 id 存在"这一信息，可被用来探测别的会话有多少条记录 |
+| **并发不失控** | 引擎内部有互斥锁串行化推理；外层再限制排队人数，超时快速返回 503 | 真正的风险不是锁竞争而是 CPU 超订——多个请求各自拉起线程会互相抢核 |
+| **不做任务队列** | 同步返回 + 前端 loading | 单次分析实测 0.24~0.46 秒，为 0.3 秒的任务引入 Celery/Redis 是纯粹的复杂度负担 |
+| **不造假进度** | 分析期间显示不确定进度条 | 推理是一次同步调用，拿不到阶段进度；编一个百分比是在骗用户 |
+| **前端免构建但本地分发** | Vue 与 vue-router 两个文件随仓库走 | 目标部署环境在国内，第三方 CDN 抖动会造成首屏白页而服务端一切正常，排查成本极高 |
+| **不泄露模型目录** | `/media` 用白名单，只放行两张图 | 原实现会把整个 `models/` 暴露出去，公网可直接下载模型权重与训练日志 |
+
+### 5.7 波形渲染与交互（前端最有技术含量的部分）
+
+桌面版的波形用 `QPainter` 自绘，具备缩放、平移、悬停读数等能力。Web 版用 Canvas 2D 重写并补齐了同样四项：
+
+**核心是把"视图区间"建模为采样点区间 `{a, b}`，而不是像素区间。**
+所有坐标换算都经过一对纯函数：
+
+```js
+xOf(vp, idx)   // 采样点 -> 画布 x
+idxOf(vp, x)   // 画布 x -> 采样点
+```
+
+缩放与平移只改 `{a, b}`，绘图层按当前区间重算：
+
+| 交互 | 做法 |
+|---|---|
+| 滚轮缩放 | 以**光标处采样点**为锚点。先记录锚点到两端的距离，再按比例缩放这两段距离，锚点自然不动 |
+| 拖拽平移 | 记下按下时的视图，按像素位移换算成采样点位移。从按下时的视图推算而非累加，避免误差累积 |
+| 双击复位 | 区间恢复为整段 |
+| 悬停读数 | 由反函数得采样点，画虚线十字线并显示绝对时间与幅值 |
+| 边界夹取 | 跨度限制在 `max(60, n/200)` 与 `n` 之间，且不越出 `[0, n]` |
+| 纵轴重标定 | 按**可见区间**的值域计算，放大后局部波动不会被整段极值压平 |
+
+浏览器比 Qt 多出几个必须处理的坑，都写在代码注释里：
+
+- `wheel` 必须 `preventDefault()` 且监听时用 `{ passive: false }`，否则页面跟着滚、缩放完全不可用
+- **点击与拖拽必须消歧**：`pointerdown` 起拖，位移超过 4px 才算拖拽，否则视为点击做命中测试
+- **双击复位前必然先来两次 click**，会改掉选中项，需要还原到双击序列开始前的值
+- **分两层画布**：底层只在数据/视图/选中变化时重绘，顶层只画十字线。单层方案在 `pointermove`（可达 120Hz）下要重画上万个点，会明显掉帧
+- `Math.min(...chunk)` 在上万个采样点时会爆栈，改显式循环
+- `canvas.width` 赋值会清空画布并重置变换，`setTransform` 必须放在尺寸设定之后
+- 视图区间必须活在渲染函数之外，否则点一下搏动就会丢失缩放位置
 
 ---
 
@@ -400,61 +520,62 @@ dropout 0.4，启用数据增强；纯 CPU 训练耗时 **18.3 分钟**。
 > 最高的 0.443（因此被选为最佳轮次），随后再未超越，呈现出典型的**后期过拟合趋势**。
 > 早停机制（连续 12 轮不提升即停止）正是为这种情况设置的。
 
-> 完整指标（逐类 PPV / 召回率 / F1、混淆矩阵、训练曲线）见 `models/metrics.json` 与
-> **`PROJECT_REPORT.md` → 评估结果**章节，也可在软件 **关于** 页直接查看。
+> 完整指标见 `models/metrics.json` 与 **`PROJECT_REPORT.md`**，也可在应用**关于**页直接查看。
 
 ---
 
 ## 七、常见问题
 
-**Q1：这个软件需要联网吗？需要装什么环境吗？**
-A：都不需要。`CardioLens.exe` 是单文件绿色程序，Python 运行时、PyTorch、Qt 全部已经打包在内。
-拷到任意一台 Windows 10/11 64 位电脑上双击即可，全程离线运行，不访问网络，也不启动任何本地服务。
+**Q1：使用者需要安装什么吗？需要联网吗？**
+A：只需要一个现代浏览器，不需要安装任何东西。前端依赖（Vue、vue-router）由服务端本地提供，
+不依赖任何第三方 CDN，因此在网络受限的环境里也能正常打开。
 
-**Q2：为什么首次运行后多了一个 `%LOCALAPPDATA%\CardioLens\` 目录？**
-A：那里存放你的分析历史（`app.db`）与运行日志（`logs\`）。可写数据刻意**不放在程序目录**，
-因为 EXE 可能被放在没有写权限的位置（如 `C:\Program Files`），而且单文件 EXE 的解压目录是临时的，
-程序一退出就被清理。想彻底清除使用痕迹，直接删除该目录即可。
+**Q2：为什么换个浏览器就看不到我的历史记录了？**
+A：本平台没有账号体系，历史记录用浏览器标识（一个 256 位随机串，存在签名 Cookie 里）区分。
+清除浏览器数据、换设备或换浏览器，都会失去这个标识，原记录也就没有了入口——**数据仍在服务端**，
+只是无法再关联到你。这是"无需注册即可隔离各自记录"的代价，界面上有明确提示。
 
-**Q3：`python -m src.prepare_data` 下载很慢或失败？**
+**Q3：为什么不做用户登录系统？**
+A：课程演示场景下，账号体系带来的注册、密码找回、凭据存储等成本远大于收益，
+而目标（多人各看各的记录）用一个随机标识就达到了。但如果要用于真实场景，必须有账号体系——
+这一点写在"已知安全边界"里。
+
+**Q4：`python -m src.prepare_data` 下载很慢或失败？**
 A：脚本默认使用 HuggingFace 镜像站（`hf-mirror.com`）下载 MIT-BIH 的完整 parquet 镜像，
 国内实测可达 400 KB/s ~ 1.8 MB/s。若仍失败，可手动下载该 parquet 文件并放置到
 `data/raw/hf/mitdb.parquet` 后重新运行。
 
-**Q4：训练要多久？**
+**Q5：训练要多久？**
 A：纯 CPU（无 GPU）实测 18.3 分钟。脚本带**早停机制**（连续 12 轮验证指标不提升即停止），
 本次训练在第 16 轮停止。想快速体验可执行 `python -m src.train --epochs 5`。
 
-**Q5：可以关掉数据增强做对照实验吗？**
+**Q6：可以关掉数据增强做对照实验吗？**
 A：可以。`python -m src.train --no-augment` 即可关闭，便于在报告中做消融对比。
 
-**Q6：为什么 Q 类（未分类/起搏搏动）的指标很差？**
+**Q7：为什么 Q 类（未分类/起搏搏动）的指标很差？**
 A：按 AAMI 惯例剔除 4 条起搏记录后，测试集中 Q 类仅剩 **7 个样本**，**不具统计意义**。
 因此项目主指标 **Macro-F1 按 N/S/V/F 四类计算**，同时保留五类 Macro-F1 供对照，
 相关说明写在 `models/metrics.json` 的 `metric_note` 字段中。
 
-**Q7：F 类（融合搏动）F1 为 0，S 类召回率只有 0.082，是 Bug 吗？**
-A：不是 Bug，是**真实且已知的模型能力不足**，项目未做任何掩盖：
-- **F 类**：388 个测试样本全部未被正确识别（379 → N，9 → V）。融合搏动形态介于 N 与 V 之间，
-  单导联形态学特征区分度天然不足，训练样本也偏少。
-- **S 类**：精确率 0.479 但召回率仅 0.082，即"判为 S 的基本是对的，但绝大多数 S 被漏掉了"。
-  这是当前最主要的短板。
+**Q8：F 类（融合搏动）F1 为 0，S 类召回率只有 0.082，是 Bug 吗？**
+A：不是 Bug，是**真实且已知的模型能力不足**，项目未做任何掩盖，详见第六节的"如实说明"。
 
-这两项在首页指标表、关于页、`models/metrics.json` 与 `PROJECT_REPORT.md` 中均**如实展示**，
-未做删除或美化。这正是本项目在"局限性与改进方向"章节重点讨论的内容。
-
-**Q8：分析时长为什么限制在 3~30 秒？**
+**Q9：分析时长为什么限制在 3~30 秒？**
 A：逐搏 Grad-CAM 需要逐样本反向传播，计算量与窗口内搏动数成正比。
-上限 30 秒（约 30~60 次心搏）可在 CPU 上于数秒内返回结果，保证交互流畅；
+上限 30 秒（约 30~60 次心搏）可在 CPU 上于亚秒级返回结果（实测中位数 0.24 秒），保证交互流畅；
 下限 3 秒确保窗口内至少包含若干次心搏，统计才有意义。
 
-**Q9：旧的网页版还能用吗？**
-A：旧版完整保留在 `legacy_web/` 目录中作留档对照，手动执行 `python -m legacy_web.app` 仍可启动。
-但它**已退役**：桌面软件不依赖它，打包时也被排除在外。
+**Q10：波形上那些标记是什么意思？怎么操作？**
+A：绿色折线是心电波形，顶部圆点是逐搏判定（颜色对应类别），橙色面积是该搏的 Grad-CAM 显著性。
+**滚轮缩放、按住拖动平移、双击复位、鼠标悬停可读数**（显示时间与幅值）。点击搏动可联动下方明细。
 
-**Q10：波形上那些标记是什么意思？**
-A：绿色折线是心电波形，竖直虚线是 R 峰位置标注，异常搏动的标记会按类别着色（见五类配色），
-橙色热力图是 Grad-CAM——颜色越亮表示模型在判断这一搏时越关注该时间段。滚轮可缩放、按住可拖动。
+**Q11：多人同时分析会不会卡？**
+A：不会。单次分析实测 0.24~0.46 秒；服务端限制同时排队的请求数，超时会返回"当前分析请求较多"，
+而不是让请求无限堆积。实测 8 个并发分析请求全部成功，总耗时不到 1 秒。
+
+**Q12：怎么备份或清理服务端的历史数据？**
+A：数据库是 `CARDIOLENS_STORE` 下的 `app.db`（SQLite 单文件），直接复制即可备份。
+清理用 `python scripts/prune_db.py --keep N`（每个会话保留最近 N 条）或 `--before 日期`。
 
 ---
 
@@ -462,19 +583,23 @@ A：绿色折线是心电波形，竖直虚线是 R 峰位置标注，异常搏�
 
 | 层次 | 技术选型 | 选择理由 |
 |---|---|---|
-| 桌面界面 | **PySide6 6.x（Qt Widgets）** | 原生控件、跨版本稳定、单文件打包体积可控 |
-| 图形绘制 | **QPainter 自绘波形** | 心电波形需要自定义网格、缩放与热力图叠加，自绘最直接且无额外依赖 |
-| 并发 | **QThread + Signal/Slot** | 推理在后台线程执行，界面全程可响应 |
+| 前端框架 | **Vue 3（ESM 构建，本地分发）** | 免构建：不引入 npm 与打包工具，部署时服务器只需 Python |
+| 图形绘制 | **原生 Canvas 2D** | 波形需要自定义网格、刻度、缩放平移与热力图叠加，自绘最直接且无额外依赖 |
+| 路由 | **vue-router 4（history 模式）** | URL 与传统多页应用一致，深链可分享 |
+| 状态管理 | **Vue `reactive()` 单例** | 需要跨视图共享的只有六项，引入 Pinia 收益为负 |
+| 后端 | **Flask 3（应用工厂 + 蓝图）** | 与推理引擎同为 Python，零跨语言成本 |
+| WSGI 服务器 | **Waitress（单进程多线程）** | 跨平台（gunicorn 不支持 Windows）；单进程使限流与并发控制的内存状态保持正确 |
+| 反向代理 | **nginx** | TLS 终止、静态资源直出、gzip、请求体上限 |
 | 深度学习 | PyTorch 2.x（**CPU 版**） | 动态图易调试，CPU 版体积可控，无需显卡 |
 | 信号处理 | SciPy（Butterworth 带通 + `filtfilt`） | 零相位滤波，不引入时间偏移 |
 | 数据处理 | NumPy / pandas / PyArrow | parquet 读取快，仅训练阶段需要 |
 | 评估 | scikit-learn | 混淆矩阵、逐类 PPV/Se/F1 |
-| 可视化图表 | Matplotlib | 训练曲线与混淆矩阵静态图（由关于页直接显示 PNG） |
-| 持久化 | SQLite（Python 内置） | 免安装、免配置 |
-| 打包 | PyInstaller（`--onefile --windowed`） | 单文件、无控制台，可独立分发 |
-| 自动化测试 | 自研桌面端自测脚本 | 无额外依赖，覆盖推理一致性与 GUI 构建 |
+| 可视化图表 | Matplotlib | 训练曲线与混淆矩阵静态图（由关于页显示 PNG） |
+| 持久化 | SQLite（WAL 模式） | 免安装、免配置；WAL 让多人读写不互相阻塞 |
+| 自动化测试 | 自研两套脚本（离线 + 端到端） | 无额外依赖，覆盖推理一致性与会话隔离 |
 
-**已退役**：Flask + Jinja2 + 原生 JS + HTML Canvas（旧 Web 版，见 `legacy_web/`）。
+> 上一版使用的 PySide6 / PyInstaller 已随桌面版一并下线，代码保留在 git 历史
+> （tag `pre-web-migration`）中。
 
 ---
 
@@ -482,11 +607,10 @@ A：绿色折线是心电波形，竖直虚线是 R 峰位置标注，异常搏�
 
 | 文档 | 内容 |
 |---|---|
-| `README.md` | 本文件：快速开始、项目结构、常见问题 |
+| `README.md` | 本文件：快速开始、项目结构、核心实现、常见问题 |
 | [`PROJECT_REPORT.md`](PROJECT_REPORT.md) | 完整项目说明：背景、目标、架构、核心实现、模型原理、运行方法、测试结果、总结 |
-| `docs/screenshots_desktop/` | 桌面端各功能界面截图（当前交付形态） |
-| `docs/screenshots_legacy_web/` | 旧 Web 版界面截图（已退役，留档对照） |
-| `docs/test_evidence/frozen_report.json` | 冻结运行时自检报告（打包后验证的原始证据） |
+| `docs/screenshots_web/` | Web 版各功能界面截图（22 张，当前交付形态） |
+| `docs/desktop_era_evidence.md` | 桌面版时代的产物 MD5、验收证据与截图清单（留档） |
 
 ---
 

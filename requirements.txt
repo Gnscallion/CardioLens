@@ -1,29 +1,39 @@
 # ============================================================
 #  心电节律智能分析平台 CardioLens —— 依赖清单
 #
-#  普通用户：不需要安装任何东西。直接双击 dist/CardioLens.exe 即可，
-#            该文件已包含 Python 解释器、PyTorch 与全部依赖。
-#
-#  开发者（从源码运行桌面版）：
+#  部署（服务器上只需 Python）：
 #      pip install -r requirements.txt
-#      python desktop/main.py
-#      国内网络建议加镜像加速：
-#          pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+#      python wsgi.py
+#
+#  国内网络建议加镜像加速：
+#      pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
+#
+#  使用者的浏览器不需要安装任何东西，也不需要任何 CDN：
+#  前端依赖（Vue、vue-router）已随仓库分发在 web/static/vendor/。
 # ============================================================
 
-# --- 桌面界面（桌面版必需）---
-PySide6>=6.6
+# --- 运行时必需 ---
 
-# --- 深度学习（推理必需；训练同样使用）---
+# Web 框架：应用工厂 + 蓝图 + 请求上下文
+flask>=3.0
+
+# 生产 WSGI 服务器。选它而不是 gunicorn 有两个原因：
+#   1) gunicorn 依赖 fork，在 Windows 上根本跑不起来；waitress 纯 Python、跨平台
+#   2) 本应用的限流计数与并发信号量都是进程内状态，必须单进程多线程运行，
+#      而 waitress 默认就是单进程多线程，正好契合
+waitress>=3.0
+
+# 深度学习（推理必需；训练同样使用）。
 # 本项目在纯 CPU 上即可训练与推理，务必使用 CPU 版，不要升级到 CUDA 版：
 #   pip install torch --index-url https://download.pytorch.org/whl/cpu
 torch>=2.0
 
-# --- 数值计算（推理必需）---
+# 数值计算（推理必需）
 numpy>=1.24
 
+
 # ---------------------------- 以下仅在“从零重建数据集 / 重新训练”时需要 ----------------------------
-# 桌面版运行时不导入这些包，打包 dist/CardioLens.exe 时也明确排除。
+# 服务运行时不导入这些包。
 
 scipy>=1.10            # Butterworth 带通滤波器设计（signal.butter / filtfilt），数据预处理用
 pandas>=2.0            # 读取 MIT-BIH 的 parquet 数据文件（prepare_data）
@@ -31,15 +41,9 @@ pyarrow>=14.0          # pandas 读取 parquet 的引擎（prepare_data）
 scikit-learn>=1.3      # 混淆矩阵、逐类 PPV / 召回率 / F1（train 评估用）
 matplotlib>=3.7        # 生成 models/confusion_matrix.png 与 training_curve.png（train 绘图用）
 
-# ---------------------------- 以下仅属于已退役的旧 Web 版 ----------------------------
-# 旧 Web 版代码已归档到 legacy_web/，不参与桌面版运行；
-# scripts/selftest.py（旧 Web 接口自测）需要 flask。
-# 桌面版的自检脚本是 scripts/test_desktop.py，不需要 flask。
-flask>=3.0
 
-# --- 可选：自动化截图（仅 scripts/screenshot.py 需要）---
-# 复用系统已安装的 Edge/Chrome，无需下载浏览器内核。
+# ---------------------------- 以下仅属于开发工具 ----------------------------
+
+# 自动化界面截图（scripts/screenshot.py）。复用系统已安装的 Edge/Chrome，
+# 无需额外下载浏览器内核。
 playwright>=1.40
-
-# --- 打包（仅发布 EXE 时需要）---
-# pyinstaller>=6.0
