@@ -122,16 +122,18 @@ class ProdConfig(BaseConfig):
 
 
 class TestConfig(BaseConfig):
-    """自动化测试：固定密钥、关闭 Secure、放宽请求体上限便于构造边界用例。"""
+    """自动化测试：固定密钥、关闭 Secure，并把限流阈值调小以便覆盖 429 分支。
+
+    请求体上限**沿用 BaseConfig 的 64 KB**（不放宽）——这样 413 用例
+    测的是线上真实生效的那个阈值，而不是一个只在测试里存在的数字。
+    """
 
     APP_ENV = "testing"
     TESTING = True
     SECRET_KEY = "test-secret-key"
     SESSION_COOKIE_SECURE = False
     ENABLE_WHOAMI = True
-    # 测试里要构造超限请求体，因此上限设得比测试用例里的目标值大，
-    # 由用例自己指定边界；限流阈值调小以便覆盖 429 分支。
-    MAX_CONTENT_LENGTH = 1024 * 1024
+    # 并发槽位保持默认；503 用例会临时把等待超时调小
     RATE_LIMITS = {
         "analyze": (3, 60.0),
         "preview": (5, 60.0),
