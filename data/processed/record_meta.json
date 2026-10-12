@@ -1,0 +1,614 @@
+{
+  "records": [
+    {
+      "id": "100",
+      "n_beats": 2271,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2237,
+        "S": 33,
+        "V": 1,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "101",
+      "n_beats": 1864,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1859,
+        "S": 3,
+        "V": 0,
+        "F": 0,
+        "Q": 2
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "103",
+      "n_beats": 2083,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2081,
+        "S": 2,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "105",
+      "n_beats": 2572,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2526,
+        "S": 0,
+        "V": 41,
+        "F": 0,
+        "Q": 5
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "106",
+      "n_beats": 2027,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1507,
+        "S": 0,
+        "V": 520,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "108",
+      "n_beats": 1762,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1739,
+        "S": 4,
+        "V": 17,
+        "F": 2,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "109",
+      "n_beats": 2531,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2491,
+        "S": 0,
+        "V": 38,
+        "F": 2,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "111",
+      "n_beats": 2124,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2123,
+        "S": 0,
+        "V": 1,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "112",
+      "n_beats": 2538,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2536,
+        "S": 2,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "113",
+      "n_beats": 1794,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1788,
+        "S": 6,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "114",
+      "n_beats": 1879,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1820,
+        "S": 12,
+        "V": 43,
+        "F": 4,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "115",
+      "n_beats": 1952,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1952,
+        "S": 0,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "116",
+      "n_beats": 2411,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2301,
+        "S": 1,
+        "V": 109,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "117",
+      "n_beats": 1534,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1533,
+        "S": 1,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "118",
+      "n_beats": 2277,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2165,
+        "S": 96,
+        "V": 16,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "119",
+      "n_beats": 1987,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1543,
+        "S": 0,
+        "V": 444,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "121",
+      "n_beats": 1862,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1860,
+        "S": 1,
+        "V": 1,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "122",
+      "n_beats": 2475,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2475,
+        "S": 0,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "123",
+      "n_beats": 1517,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1514,
+        "S": 0,
+        "V": 3,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "124",
+      "n_beats": 1618,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1535,
+        "S": 31,
+        "V": 47,
+        "F": 5,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "200",
+      "n_beats": 2600,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1742,
+        "S": 30,
+        "V": 826,
+        "F": 2,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "201",
+      "n_beats": 1963,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1635,
+        "S": 128,
+        "V": 198,
+        "F": 2,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "202",
+      "n_beats": 2135,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2060,
+        "S": 55,
+        "V": 19,
+        "F": 1,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "203",
+      "n_beats": 2980,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2529,
+        "S": 2,
+        "V": 444,
+        "F": 1,
+        "Q": 4
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "205",
+      "n_beats": 2655,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2570,
+        "S": 3,
+        "V": 71,
+        "F": 11,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "207",
+      "n_beats": 1859,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1542,
+        "S": 107,
+        "V": 210,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "208",
+      "n_beats": 2953,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1585,
+        "S": 2,
+        "V": 992,
+        "F": 372,
+        "Q": 2
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "209",
+      "n_beats": 3004,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2620,
+        "S": 383,
+        "V": 1,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "210",
+      "n_beats": 2648,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2421,
+        "S": 22,
+        "V": 195,
+        "F": 10,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "212",
+      "n_beats": 2747,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2747,
+        "S": 0,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "213",
+      "n_beats": 3250,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2640,
+        "S": 28,
+        "V": 220,
+        "F": 362,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "214",
+      "n_beats": 2260,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2001,
+        "S": 0,
+        "V": 256,
+        "F": 1,
+        "Q": 2
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "215",
+      "n_beats": 3362,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 3194,
+        "S": 3,
+        "V": 164,
+        "F": 1,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "219",
+      "n_beats": 2154,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2082,
+        "S": 7,
+        "V": 64,
+        "F": 1,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "220",
+      "n_beats": 2046,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1952,
+        "S": 94,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "221",
+      "n_beats": 2427,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2031,
+        "S": 0,
+        "V": 396,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "222",
+      "n_beats": 2481,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2272,
+        "S": 209,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "223",
+      "n_beats": 2604,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2044,
+        "S": 73,
+        "V": 473,
+        "F": 14,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "228",
+      "n_beats": 2053,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1688,
+        "S": 3,
+        "V": 362,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "230",
+      "n_beats": 2255,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2254,
+        "S": 0,
+        "V": 1,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "231",
+      "n_beats": 1570,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 1567,
+        "S": 1,
+        "V": 2,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "232",
+      "n_beats": 1780,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 398,
+        "S": 1382,
+        "V": 0,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "233",
+      "n_beats": 3077,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2229,
+        "S": 7,
+        "V": 830,
+        "F": 11,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    },
+    {
+      "id": "234",
+      "n_beats": 2753,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 2700,
+        "S": 50,
+        "V": 3,
+        "F": 0,
+        "Q": 0
+      },
+      "split": "DS2（测试）"
+    }
+  ],
+  "classes": [
+    {
+      "code": "N",
+      "name": "正常搏动",
+      "desc": "窦性心律来源的正常心搏，包括左/右束支传导阻滞搏动。"
+    },
+    {
+      "code": "S",
+      "name": "室上性早搏",
+      "desc": "起源位于心室以上的异位搏动，如期前房性早搏、交界性早搏。"
+    },
+    {
+      "code": "V",
+      "name": "室性早搏",
+      "desc": "起源于心室的异位搏动，如室性早搏、室性逸搏，临床关注度较高。"
+    },
+    {
+      "code": "F",
+      "name": "融合搏动",
+      "desc": "正常搏动与室性搏动融合形成，QRS 形态介于两者之间。"
+    },
+    {
+      "code": "Q",
+      "name": "未分类/起搏搏动",
+      "desc": "无法归入上述类别的搏动，以及起搏器起搏/感知搏动。"
+    }
+  ],
+  "total_beats": 100694,
+  "class_totals": {
+    "N": 90088,
+    "S": 2781,
+    "V": 7008,
+    "F": 802,
+    "Q": 15
+  },
+  "n_train": 51002,
+  "n_test": 49692,
+  "source": "MIT-BIH Arrhythmia Database (PhysioNet) · HF 镜像 epr-labs/mit-bih-arrhythmia-database"
+}

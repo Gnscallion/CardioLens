@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }} · {{ app_name_zh }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💓</text></svg>">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="{{ url_for('page_index') }}">
+      <span class="brand-mark">
+        <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+          <path d="M2 17h5l3-8 4 15 4-11 3 4h9"
+                fill="none" stroke="currentColor" stroke-width="2.4"
+                stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </span>
+      <span class="brand-text">
+        <strong>{{ app_name }}</strong>
+        <em>{{ app_name_zh }}</em>
+      </span>
+    </a>
+
+    <nav class="nav">
+      <a href="{{ url_for('page_index') }}"   class="{{ 'on' if active=='home' }}">首页</a>
+      <a href="{{ url_for('page_analyze') }}" class="{{ 'on' if active=='analyze' }}">智能分析</a>
+      <a href="{{ url_for('page_history') }}" class="{{ 'on' if active=='history' }}">历史记录</a>
+      <a href="{{ url_for('page_about') }}"   class="{{ 'on' if active=='about' }}">关于</a>
+    </nav>
+  </div>
+</header>
+
+<main class="page">
+  {% block content %}{% endblock %}
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <p class="warn">
+      <strong>⚠ 免责声明</strong>
+      {{ disclaimer }}
+    </p>
+    <p class="copy">
+      {{ app_name }} · {{ app_name_zh }} · 软件工程课程作业 ·
+      数据来源 <a href="https://physionet.org/content/mitdb/" target="_blank" rel="noopener">MIT-BIH Arrhythmia Database</a>
+    </p>
+  </div>
+</footer>
+{% block scripts %}{% endblock %}
+</body>
+</html>

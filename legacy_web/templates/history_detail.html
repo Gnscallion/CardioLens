@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% block title %}报告 #{{ item.id if item else '' }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+{% if not item %}
+<div class="card">
+  <div class="empty">
+    <div class="big">🔍</div>
+    <p>找不到该分析报告，它可能已被删除。</p>
+    <a class="btn btn-primary" href="{{ url_for('page_history') }}">返回历史记录</a>
+  </div>
+</div>
+{% else %}
+
+<div class="card-head" style="margin-bottom:18px">
+  <div>
+    <h1 style="margin-bottom:2px">{{ item.title }}</h1>
+    <p class="card-sub">
+      报告编号 #{{ item.id }} · 保存于 {{ item.created_at }} ·
+      记录 {{ item.record_id }} · 起始 {{ '%.1f'|format(item.start_sec) }} s ·
+      时长 {{ '%.0f'|format(item.duration_sec) }} s
+    </p>
+  </div>
+  <div class="nowrap">
+    <a class="btn btn-ghost btn-sm" href="{{ url_for('page_history') }}">← 返回列表</a>
+    <button class="btn btn-danger btn-sm" id="delBtn" data-id="{{ item.id }}">删除此报告</button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="risk {{ item.payload.summary.risk_level.code }}">
+    <div class="t">{{ item.payload.summary.risk_level.label }}</div>
+    <div class="d">{{ item.payload.summary.risk_level.desc }}</div>
+    {# 历史报告同样属于医学相关结果，免责声明需与结论紧邻展示 #}
+    <div class="d small" style="margin-top:8px;opacity:.92">
+      ⚠ 以上结果由机器学习模型自动生成，仅用于课程项目演示与辅助分析，
+      不构成医疗诊断依据，不能用于任何临床决策。如有健康问题请及时就医。
+    </div>
+  </div>
+
+  <div class="grid grid-4" style="margin-top:18px">
+    <div class="stat"><div class="k">分析心搏数</div>
+      <div class="v">{{ item.payload.summary.n_beats }}</div></div>
+    <div class="stat warn"><div class="k">异常搏动数</div>
+      <div class="v">{{ item.payload.summary.abnormal_count }}</div></div>
+    <div class="stat danger"><div class="k">异常搏动占比</div>
+      <div class="v">{{ '%.1f'|format(item.payload.summary.abnormal_ratio * 100) }}<span class="u">%</span></div></div>
+    <div class="stat ok"><div class="k">与专家标注一致率</div>
+      <div class="v">{{ '%.1f'|format(item.payload.summary.agreement * 100) }}<span class="u">%</span></div></div>
+  </div>
+
+  {# 训练集记录模型见过，一致率偏高，不能当作泛化能力——历史回看时同样要如实提示 #}
+  {% if 'in_training_set' in item.payload %}
+    {% if item.payload.in_training_set %}
+    <div class="alert alert-warn small" style="margin:16px 0 0">
+      <span>⚠</span>
+      <div>
+        <strong>本记录属于训练集（{{ item.payload.split or 'DS1' }}），
+        模型在训练时已见过该患者的心搏。</strong>
+        因此上方的逐搏一致率<strong>明显偏高，不能作为模型泛化能力的证据</strong>。
+        真实泛化水平请参考「关于」页的跨患者测试集指标
+        （整体准确率 93.35%，但 Macro-F1 仅 0.504，F 类 F1 为 0）。
+      </div>
+    </div>
+    {% else %}
+    <div class="alert alert-ok small" style="margin:16px 0 0">
+      <span>✓</span>
+      <div>本记录属于<strong>测试集（{{ item.payload.split or 'DS2' }}）</strong>，
+        训练全程未接触过该患者，此处的对照结果可反映跨患者泛化表现。</div>
+    </div>
+    {% endif %}
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="card-head">
+    <div>
+      <h3>逐搏分类标注</h3>
+      <p class="card-sub">点击任一搏动查看其判读详情</p>
+    </div>
+  </div>
+  <div class="wave-box">
+    <canvas id="resCanvas"></canvas>
+    <div class="wave-tip" id="resTip"></div>
+  </div>
+  <div class="wave-legend" id="resLegend"></div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>心律类型构成</h3>
+    <div class="stack" id="stackBox"></div>
+    <div id="distBox"></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h3 style="margin:0">单搏详情</h3>
+      <span class="badge badge-mute" id="beatNav">—</span>
+    </div>
+    <div class="wave-box" style="padding:8px"><canvas id="beatCanvas"></canvas></div>
+    <div id="beatInfo" style="margin-top:14px"></div>
+  </div>
+</div>
+
+<div class="card">
+  <h3>逐搏明细</h3>
+  <div class="table-wrap" style="max-height:420px;overflow-y:auto">
+    <table>
+      <thead>
+        <tr><th>#</th><th>时间</th><th>模型判定</th><th>置信度</th>
+            <th>专家标注</th><th>是否一致</th></tr>
+      </thead>
+      <tbody id="beatRows"></tbody>
+    </table>
+  </div>
+</div>
+
+<script id="payload-data" type="application/json">{{ item.payload|tojson }}</script>
+
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if item %}
+<script src="{{ url_for('static', filename='js/wave.js') }}"></script>
+<script src="{{ url_for('static', filename='js/rhythm.js') }}"></script>
+<script src="{{ url_for('static', filename='js/history_detail.js') }}"></script>
+{% endif %}
+{% endblock %}

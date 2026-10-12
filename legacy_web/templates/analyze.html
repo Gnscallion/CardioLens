@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}智能分析 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="card-head" style="margin-bottom:18px">
+  <div>
+    <h1 style="margin-bottom:2px">心电智能分析工作台</h1>
+    <p class="card-sub">选择记录与时间窗 → 波形预览 → 逐搏分析 → 保存报告</p>
+  </div>
+</div>
+
+{% if not ready %}
+<div class="alert alert-warn">
+  <span>⚠</span>
+  <div>
+    <strong>系统尚未就绪：</strong>{{ ready_msg }}
+    <div class="small" style="margin-top:6px">
+      请先执行 <code class="mono">python -m src.prepare_data</code> 与
+      <code class="mono">python -m src.train</code>。
+    </div>
+  </div>
+</div>
+{% else %}
+
+<div class="grid grid-side">
+
+  <!-- =============================== 左侧参数区 -->
+  <aside>
+    <div class="card">
+      <h3>分析参数</h3>
+
+      <div class="field">
+        <label for="recSel">心电记录</label>
+        <select id="recSel"></select>
+        <div class="hint" id="recNote"></div>
+      </div>
+
+      <div class="field">
+        <label>快速选择</label>
+        <div class="quick" id="quickChips"></div>
+      </div>
+
+      <div class="field">
+        <label for="startRange">起始时间</label>
+        <div class="range-row">
+          <input type="range" id="startRange" min="0" max="100" step="0.5" value="0">
+          <span class="range-val" id="startVal">0.0s</span>
+        </div>
+        <div class="hint" id="startHint"></div>
+      </div>
+
+      <div class="field">
+        <label for="durRange">分析时长</label>
+        <div class="range-row">
+          <input type="range" id="durRange" min="5" max="30" step="1" value="10">
+          <span class="range-val" id="durVal">10s</span>
+        </div>
+        <div class="hint">时长越长，纳入分析的心搏越多，单次上限 30 秒</div>
+      </div>
+
+      <div class="field">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:500">
+          <input type="checkbox" id="camChk" checked style="width:auto">
+          启用 Grad-CAM 可解释性分析
+        </label>
+      </div>
+
+      <button class="btn btn-ghost btn-block" id="previewBtn" style="margin-bottom:9px">
+        ① 预览波形
+      </button>
+      <button class="btn btn-primary btn-block btn-lg" id="analyzeBtn" disabled>
+        ② 开始分析
+      </button>
+    </div>
+
+    <div class="card" id="recInfoCard">
+      <h3>当前记录信息</h3>
+      <dl class="kv" id="recInfo">
+        <dt>记录编号</dt><dd id="iId">—</dd>
+        <dt>总时长</dt><dd id="iDur">—</dd>
+        <dt>心搏总数</dt><dd id="iBeats">—</dd>
+        <dt>数据分组</dt><dd id="iSplit">—</dd>
+      </dl>
+      <div style="margin-top:14px">
+        <div class="k small muted" style="margin-bottom:6px">该记录心搏类别构成</div>
+        <div class="stack" id="iStack"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- =============================== 右侧主区 -->
+  <div>
+
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <h2 id="waveTitle">波形预览</h2>
+          <p class="card-sub" id="waveSub">点击左侧「预览波形」加载信号</p>
+        </div>
+        <div class="wave-legend" id="waveLegend"></div>
+      </div>
+
+      <div class="wave-box">
+        <canvas id="waveCanvas" width="1600" height="360"></canvas>
+        <div class="wave-tip" id="waveTip"></div>
+      </div>
+
+      <div class="wave-legend" id="waveFoot" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card" id="progressCard" style="display:none">
+      <h3>分析过程</h3>
+      <ul class="steps" id="stepList"></ul>
+    </div>
+
+    <div id="resultArea"></div>
+
+  </div>
+</div>
+
+<script id="records-data" type="application/json">{{ records|tojson }}</script>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if ready %}
+<script src="{{ url_for('static', filename='js/wave.js') }}"></script>
+<script src="{{ url_for('static', filename='js/rhythm.js') }}"></script>
+<script src="{{ url_for('static', filename='js/analyze.js') }}"></script>
+{% endif %}
+{% endblock %}
