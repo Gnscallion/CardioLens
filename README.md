@@ -135,7 +135,7 @@ python -m src.train
 | `CARDIOLENS_ENV` | `development` | **生产环境必须设为 `production`**，否则使用开发用固定密钥 |
 | `CARDIOLENS_SECRET_KEY` | 无 | **生产环境必填**。用于签名会话 Cookie，**必须保持稳定**——一旦改变，所有使用者的历史入口会立即失效 |
 | `CARDIOLENS_STORE` | 代码目录下的 `store/` | 可写数据目录（SQLite 与日志）。建议指到持久化卷，使代码目录可以整体只读 |
-| `CARDIOLENS_HOST` / `CARDIOLENS_PORT` | `127.0.0.1` / `5000` | 监听地址。生产环境应只监听回环，由反向代理对外 |
+| `CARDIOLENS_HOST` / `CARDIOLENS_PORT` | `127.0.0.1` / `5000` | 监听地址。生产环境应只监听回环，由反向代理对外。下面的 systemd 示例显式设为 `8001`，只是为了与 nginx 的 `upstream` 书写一致，并非另一个默认值 |
 | `CARDIOLENS_THREADS` | `4` | WSGI 工作线程数 |
 | `CARDIOLENS_MAX_CONCURRENT` | `4` | 同时允许排队的分析请求数上限 |
 | `CARDIOLENS_SLOT_TIMEOUT` | `8.0` | 等待并发槽位的秒数，超时返回 503 |

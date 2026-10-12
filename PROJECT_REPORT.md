@@ -1246,11 +1246,17 @@ pip install torch --index-url https://download.pytorch.org/whl/cpu
 服务端启动后，使用者只需在浏览器打开站点地址即可，**客户端零安装**：
 
 ```text
-http://127.0.0.1:8001/            # 本机开发
+http://127.0.0.1:5000/            # 本机开发（代码默认端口）
+http://127.0.0.1:8001/            # 生产部署（systemd 示例中显式指定的回环端口）
 https://your.domain/              # 公网部署后
 ```
 
 不需要安装任何软件，不需要命令行，也不需要在客户端准备 Python 环境。
+
+> **关于两个端口号**：代码里的默认监听端口是 **5000**（`CARDIOLENS_PORT` 未设置时）。
+> 本文档的部署示例（方式四）显式把它设为 **8001**，只是为了与 nginx 的
+> `upstream` 配置书写一致，并非另一个默认值。两者不是冲突，只是
+> "默认值"与"推荐的生产取值"的区别。
 
 #### 方式二：从源码运行（面向开发者）
 
@@ -1298,10 +1304,11 @@ python -m src.train
 | `CARDIOLENS_ENV` | `development` | **生产环境必须设为 `production`**，否则使用开发用固定密钥 |
 | `CARDIOLENS_SECRET_KEY` | 无 | **生产环境必填**。用于签名会话 Cookie，**必须保持稳定**——一旦改变，所有使用者的历史入口会立即失效 |
 | `CARDIOLENS_STORE` | 代码目录下的 `store/` | 可写数据目录（SQLite 与日志）。建议指到持久化卷，使代码目录可以整体只读 |
-| `CARDIOLENS_HOST` / `CARDIOLENS_PORT` | `127.0.0.1` / `5000` | 监听地址。生产环境应只监听回环，由反向代理对外 |
+| `CARDIOLENS_HOST` / `CARDIOLENS_PORT` | `127.0.0.1` / `5000` | 监听地址。生产环境应只监听回环，由反向代理对外。下方 systemd 示例显式设为 `8001`，只为与 nginx 的 `upstream` 书写一致，并非另一个默认值 |
 | `CARDIOLENS_THREADS` | `4` | WSGI 工作线程数 |
 | `CARDIOLENS_MAX_CONCURRENT` | `4` | 同时允许排队的分析请求数上限 |
 | `CARDIOLENS_SLOT_TIMEOUT` | `8.0` | 等待并发槽位的秒数，超时返回 503 |
+| `CARDIOLENS_TORCH_THREADS` | `1` | PyTorch 的算子线程数。**不要调大**——多个请求各自拉起线程会互相抢核，实测反而更慢；串行化已由引擎内部的锁保证 |
 
 生成密钥：
 
