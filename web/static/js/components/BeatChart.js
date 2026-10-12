@@ -39,13 +39,15 @@ export default {
 
     function draw() {
       const canvas = canvasRef.value;
-      const host = hostRef.value;
-      if (!canvas || !host) return;
+      if (!canvas) return;
 
       const beat = props.beat || {};
       const signal = sliceBeat(props.signal, beat.sample ?? -1);
       const cam = beat.cam;
-      const w = host.clientWidth;
+
+      // 与 EcgStrip 同理：宽度取画布直接父元素，避免超出带内边距的容器
+      const host = canvas.parentElement;
+      const w = host ? host.clientWidth : 0;
       if (w <= 0) return;
 
       const { ctx, W, H } = setupCanvas(canvas, w, props.height);

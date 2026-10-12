@@ -69,54 +69,65 @@ function drawGrid(ctx, geom, state, yOf) {
   const { padL, padT, plotW, plotH } = geom;
   const { vp, signal, fs } = state;
 
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(padL, padT, plotW, plotH);
-  ctx.clip();
-
-  ctx.lineWidth = 1;
-  ctx.font = '11px ui-monospace, Consolas, monospace';
-
   // 纵向：按时间。刻度值取绝对时间（窗口起点 + 窗口内偏移），
   // 与十字线读数保持同一坐标系。
   const startSec = state.startSec || 0;
   const secStep = niceStep((vp.b - vp.a) / fs, Math.max(4, plotW / 110));
   const digits = secStep < 1 ? 1 : 0;
 
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
+  const timeTicks = [];
   const firstTick = Math.ceil((startSec + vp.a / fs) / secStep) * secStep;
   const lastTick = startSec + vp.b / fs;
   for (let t = firstTick; t <= lastTick + 1e-9; t += secStep) {
-    const idx = (t - startSec) * fs;
-    const x = xOf(vp, idx, geom);
+    const x = xOf(vp, (t - startSec) * fs, geom);
     if (x < padL - 0.5 || x > padL + plotW + 0.5) continue;
-    ctx.strokeStyle = THEME.grid;
-    ctx.beginPath();
-    ctx.moveTo(x, padT);
-    ctx.lineTo(x, padT + plotH);
-    ctx.stroke();
-    ctx.fillStyle = THEME.text;
-    ctx.fillText(t.toFixed(digits) + 's', x, padT + plotH + 6);
+    timeTicks.push({ x, label: t.toFixed(digits) + 's' });
   }
 
-  // 横向：按幅值
   const { lo, hi } = viewBounds(vp, signal);
   const mvStep = niceStep(hi - lo, 5);
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'middle';
+  const ampTicks = [];
   for (let v = Math.ceil(lo / mvStep) * mvStep; v <= hi; v += mvStep) {
     const y = yOf(v);
     if (y < padT - 0.5 || y > padT + plotH + 0.5) continue;
-    ctx.strokeStyle = Math.abs(v) < 1e-9 ? THEME.gridMajor : THEME.grid;
-    ctx.beginPath();
-    ctx.moveTo(padL, y);
-    ctx.lineTo(padL + plotW, y);
-    ctx.stroke();
-    ctx.fillStyle = THEME.text;
-    ctx.fillText(v.toFixed(Math.abs(mvStep) < 1 ? 2 : 1), padL - 8, y);
+    ampTicks.push({ y, v, label: v.toFixed(Math.abs(mvStep) < 1 ? 2 : 1) });
   }
+
+  // 网格线：只画在绘图区内，因此需要裁剪
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(padL, padT, plotW, plotH);
+  ctx.clip();
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = THEME.grid;
+  timeTicks.forEach((t) => {
+    ctx.beginPath();
+    ctx.moveTo(t.x, padT);
+    ctx.lineTo(t.x, padT + plotH);
+    ctx.stroke();
+  });
+  ampTicks.forEach((a) => {
+    ctx.strokeStyle = Math.abs(a.v) < 1e-9 ? THEME.gridMajor : THEME.grid;
+    ctx.beginPath();
+    ctx.moveTo(padL, a.y);
+    ctx.lineTo(padL + plotW, a.y);
+    ctx.stroke();
+  });
   ctx.restore();
+
+  // 刻度文字：画在绘图区**外侧**（左侧与下方），必须在 restore 之后画。
+  // 若和网格线一起放进裁剪区，文字会被整片裁掉——绘图区里什么也看不见。
+  ctx.font = '11px ui-monospace, Consolas, monospace';
+  ctx.fillStyle = THEME.text;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  timeTicks.forEach((t) => ctx.fillText(t.label, t.x, padT + plotH + 6));
+
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ampTicks.forEach((a) => ctx.fillText(a.label, padL - 8, a.y));
+  ctx.textBaseline = 'alphabetic';
 }
 
 /**

@@ -47,13 +47,22 @@ export default {
         selected: props.selected ?? -1,
         showCam: props.showCam,
         vp,
+        // geom 必须一起给出：交互层要用 padL / plotW 做坐标换算与命中测试。
+        // 漏掉它会让滚轮与拖拽在换算坐标时抛异常（而双击不碰 geom，看似正常）。
+        geom,
         width: width.value,
         height: props.height,
       };
     }
 
     function draw() {
-      if (!baseRef.value || !overlayRef.value || width.value <= 0) return;
+      if (!baseRef.value || !overlayRef.value) return;
+      // 宽度取**画布直接父元素**的，而不是外层容器的：画布位于 .wave-box 内，
+      // 而 .wave-box 有水平内边距，用外层宽度会让画布超出容器被裁掉。
+      const host = baseRef.value.parentElement;
+      const w = host ? host.clientWidth : 0;
+      if (w <= 0) return;
+      width.value = w;
       const state = currentState();
       geom = drawBase(baseRef.value, state);
       drawOverlay(overlayRef.value, state, geom, hover);
@@ -66,18 +75,14 @@ export default {
 
     function handleHover(h) {
       // 只重绘顶层，不动底层
-      if (width.value <= 0 || !overlayRef.value) return;
+      if (!overlayRef.value) return;
       hover = h;
       drawOverlay(overlayRef.value, currentState(), geom, hover);
     }
 
     function measure() {
-      if (!hostRef.value) return;
-      const w = hostRef.value.clientWidth;
-      if (w > 0 && w !== width.value) {
-        width.value = w;
-        draw();
-      }
+      // 触发一次重绘即可；真实宽度在 draw() 里按画布父元素重新读取
+      draw();
     }
 
     onMounted(() => {
@@ -106,7 +111,12 @@ export default {
       else window.removeEventListener('resize', measure);
     });
 
-    // 数据换了（新的一次分析 / 另一条历史）→ 复位视图
+    // 数据换了（新的一次分析 / 另一条历史）→ 复位视图。
+    //
+    // immediate: true 是必须的：组件创建时数据通常已经就位（结果面板只在
+    // 拿到结果后才渲染），此时 watch 不会触发，vp 就会停留在 createViewport()
+    // 给的 {0,0} 上——跨度 0 会让横坐标映射全部塌缩到左边界，
+    // 表现为"波形挤成一条竖线"，而任何一次缩放/复位又会把它掩盖过去。
     watch(
       () => props.signal,
       (sig) => {
@@ -115,7 +125,8 @@ export default {
         resetView(vp, (sig || []).length);
         hover = null;
         draw();
-      }
+      },
+      { immediate: true }
     );
 
     // 选中项、Grad-CAM 开关、窗口起点变化 → 重绘底层（视图区间保持不变）
@@ -142,7 +153,15 @@ export default {
       handleViewChange();
     }
 
-    expose({ resetView: resetToFull, zoomToBeat });
+    expose({
+      resetView: resetToFull,
+      zoomToBeat,
+      /**
+       * 当前视图区间（采样点）。只读，供自动化脚本断言
+       * "缩放/平移/复位确实改变了视图"，而不是只看有没有报错。
+       */
+      viewRange: () => ({ a: vp.a, b: vp.b, n: props.signal.length }),
+    });
 
     // 模板里要直接调用，因此除了 expose 给父组件，还要从 setup 返回
     return { hostRef, baseRef, overlayRef, width, resetToFull, zoomToBeat };

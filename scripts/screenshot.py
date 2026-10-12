@@ -1,240 +1,292 @@
-"""自动截图脚本：驱动浏览器访问各页面并保存课堂作业截图。
+"""生成 Web 版界面截图，输出到 docs/screenshots_web/。
 
 使用系统已安装的 Edge 浏览器（channel="msedge"），无需额外下载浏览器内核。
 
+脚本会自己拉起一个服务实例，并把可写数据目录指向临时位置——
+否则演示用的报告会被写进真实的 store/app.db。
+
 用法：
-    python scripts/screenshot.py              # 若服务未启动则自动拉起
-    python scripts/screenshot.py --url http://127.0.0.1:5000
+    python scripts/screenshot.py              # 无头运行
+    python scripts/screenshot.py --headed     # 显示浏览器窗口
+    python scripts/screenshot.py --keep       # 保留临时数据目录（便于排查）
 """
 from __future__ import annotations
 
 import argparse
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
-import urllib.error
 import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(ROOT))
+OUT_DIR = ROOT / "docs" / "screenshots_web"
 
-from src.config import force_utf8_stdout   # noqa: E402
+HOST = "127.0.0.1"
+PORT = int(os.environ.get("CARDIOLENS_SHOT_PORT", "5082"))
+BASE = f"http://{HOST}:{PORT}"
 
-OUT_DIR = ROOT / "docs" / "screenshots"
 VIEWPORT = {"width": 1440, "height": 900}
+MOBILE = {"width": 390, "height": 844}
+
+# 截图用的两条记录：一条测试集、一条训练集，用于对照"划分提示"
+RECORD_TEST = "100"      # DS2 测试集
+RECORD_TRAIN = "208"     # DS1 训练集
 
 
-def server_alive(url: str, timeout: float = 2.0) -> bool:
-    try:
-        with urllib.request.urlopen(url + "/api/status", timeout=timeout) as r:
-            return r.status == 200
-    except (urllib.error.URLError, OSError, ValueError):
-        return False
+def start_server(store: Path) -> subprocess.Popen:
+    code = (
+        "import sys;"
+        f"sys.path.insert(0, r'{ROOT}');"
+        "from waitress import serve;"
+        "from wsgi import app;"
+        f"serve(app, host='{HOST}', port={PORT}, threads=4, ident='CardioLensShot')"
+    )
+    env = {
+        **os.environ,
+        "CARDIOLENS_STORE": str(store),
+        "CARDIOLENS_SECRET_KEY": "screenshot-secret",
+        "PYTHONIOENCODING": "utf-8",
+    }
+    proc = subprocess.Popen([sys.executable, "-c", code], cwd=str(ROOT), env=env,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 
-
-def wait_server(url: str, timeout: float = 60.0) -> bool:
-    deadline = time.time() + timeout
+    deadline = time.time() + 90
     while time.time() < deadline:
-        if server_alive(url):
-            return True
-        time.sleep(1.0)
-    return False
+        if proc.poll() is not None:
+            raise RuntimeError("服务启动即退出")
+        try:
+            with urllib.request.urlopen(f"{BASE}/api/health", timeout=2) as r:
+                if r.status == 200:
+                    return proc
+        except Exception:                                    # noqa: BLE001
+            time.sleep(0.5)
+    proc.kill()
+    raise RuntimeError("服务启动超时")
 
 
 def main() -> int:
-    # Windows 控制台默认 GBK，下面用到的 ✓/✗ 与中文文件名会触发 UnicodeEncodeError
-    force_utf8_stdout()
+    parser = argparse.ArgumentParser(description="生成 Web 版界面截图")
+    parser.add_argument("--headed", action="store_true", help="显示浏览器窗口")
+    parser.add_argument("--keep", action="store_true", help="保留临时数据目录")
+    args = parser.parse_args()
 
-    ap = argparse.ArgumentParser(description="自动截取项目 UI 截图")
-    ap.add_argument("--url", default="http://127.0.0.1:5000")
-    ap.add_argument("--headed", action="store_true", help="显示浏览器窗口（调试用）")
-    args = ap.parse_args()
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("缺少 playwright。安装：pip install playwright", file=sys.stderr)
+        return 1
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    base = args.url.rstrip("/")
+    tmp = Path(tempfile.mkdtemp(prefix="cardiolens_shot_"))
+    store = tmp / "store"
+    store.mkdir(parents=True, exist_ok=True)
+    print(f"临时数据目录：{store}")
 
-    proc = None
-    if not server_alive(base):
-        print("[截图] 服务未运行，正在启动 Flask ...")
-        proc = subprocess.Popen(
-            [sys.executable, "app.py"], cwd=str(ROOT),
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-        )
-        if not wait_server(base):
-            print("[截图] 启动服务失败，请手动运行 python app.py 后重试")
-            if proc:
-                proc.terminate()
-            return 1
-    print(f"[截图] 服务就绪：{base}")
+    proc = start_server(store)
+    shots: list[Path] = []
 
-    from playwright.sync_api import sync_playwright
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(channel="msedge", headless=not args.headed)
+            ctx = browser.new_context(viewport=VIEWPORT, device_scale_factor=2,
+                                      locale="zh-CN")
+            page = ctx.new_page()
 
-    saved: list[str] = []
-    errors: list[str] = []
+            def shot(name: str, clip=None, full=False):
+                path = OUT_DIR / f"{name}.png"
+                page.screenshot(path=str(path), clip=clip, full_page=full)
+                shots.append(path)
+                print(f"  ✓ {path.name}")
 
-    def shot(page, name: str, full: bool = False, wait: float = 0.6):
-        try:
-            page.wait_for_timeout(int(wait * 1000))
-            path = OUT_DIR / name
-            page.screenshot(path=str(path), full_page=full)
-            saved.append(name)
-            print(f"[截图] ✓ {name}")
-        except Exception as e:                       # 单张失败不应中断整体流程
-            errors.append(f"{name}: {e}")
-            print(f"[截图] ✗ {name} -> {e}")
+            def shot_el(locator, name: str):
+                """按元素截图。会自动把元素滚入视口，无需自己算坐标裁剪。"""
+                locator.scroll_into_view_if_needed()
+                page.wait_for_timeout(250)
+                path = OUT_DIR / f"{name}.png"
+                locator.screenshot(path=str(path))
+                shots.append(path)
+                print(f"  ✓ {path.name}")
 
-    with sync_playwright() as p:
-        browser = p.chromium.launch(channel="msedge", headless=not args.headed)
-        ctx = browser.new_context(
-            viewport=VIEWPORT, device_scale_factor=2, locale="zh-CN",
-        )
-        page = ctx.new_page()
-        page.set_default_timeout(30000)
+            def wait_ready(timeout=30000):
+                page.wait_for_selector(".topbar", timeout=timeout)
 
-        # ---------------- 1. 首页 ----------------
-        page.goto(base + "/", wait_until="networkidle")
-        shot(page, "01-首页.png", full=True, wait=1.0)
+            # ---------------------------------------------------- 首页
+            print("\n[首页]")
+            page.goto(BASE + "/", wait_until="load")
+            wait_ready()
+            page.wait_for_selector(".hero")
+            page.wait_for_timeout(500)
+            shot("01-首页", full=True)
 
-        # ---------------- 2. 分析工作台（含波形预览）----------------
-        page.goto(base + "/analyze", wait_until="networkidle")
-        page.wait_for_timeout(2500)                  # 等首屏自动预览完成
-        shot(page, "02-分析工作台.png", wait=0.8)
+            # ---------------------------------------------------- 分析工作台
+            print("\n[分析工作台]")
+            page.click(".nav a[href='/analyze']")
+            page.wait_for_selector("[data-test='rec-select']")
+            page.wait_for_selector("[data-test='wave-canvas']")
+            page.wait_for_timeout(1200)
+            box = page.locator(".grid-side").bounding_box()
+            shot("02-分析工作台-参数与预览")
+            shot("03-波形预览", clip=box)
 
-        # 切换到室性早搏较多的记录，便于展示异常识别
-        try:
-            page.select_option("#recSel", "208")
-            page.wait_for_timeout(600)
-            page.click("#previewBtn")
-            page.wait_for_timeout(2200)
-            shot(page, "03-波形预览.png", wait=0.6)
-        except Exception as e:
-            errors.append(f"波形预览: {e}")
-
-        # ---------------- 4. 分析过程（步骤动画中）----------------
-        try:
-            page.click("#analyzeBtn")
-            page.wait_for_timeout(1100)              # 抓取步骤动画进行中的画面
-            shot(page, "04-分析过程.png", wait=0.0)
-            page.wait_for_selector("#resultArea .risk", timeout=30000)
+            # 训练集记录的分析，用于"划分提示"对照
+            print("\n[分析：训练集记录 208]")
+            page.select_option("[data-test='rec-select']", RECORD_TRAIN)
             page.wait_for_timeout(1500)
-            shot(page, "05-分析结果.png", wait=0.5)
-        except Exception as e:
-            errors.append(f"分析流程: {e}")
-            print(f"[截图] ✗ 分析流程 -> {e}")
-
-        # ---------------- 6. 逐搏明细表 ----------------
-        try:
-            page.evaluate("document.querySelector('#beatRows')?.scrollIntoView({block:'center'})")
+            page.click("[data-test='analyze-btn']")
+            # 分析很快（约 0.3 秒），先抢一张"分析中"再等结果
+            try:
+                page.wait_for_selector("[data-test='analyzing']", timeout=3000)
+                shot("04-分析过程")
+            except Exception:                                # noqa: BLE001
+                print("  · 分析过快，未捕捉到进行中状态（属正常）")
+            page.wait_for_selector("[data-test='split-note']", timeout=60000)
             page.wait_for_timeout(900)
-            shot(page, "06-逐搏明细.png", wait=0.5)
-        except Exception as e:
-            errors.append(f"逐搏明细: {e}")
+            shot("05-分析结果-整体", full=True)
+            beat_table_head = page.locator("h2").filter(has_text="逐搏结果")
+            beat_table_head.wait_for(timeout=20000)
+            beat_table_head.scroll_into_view_if_needed()
+            page.wait_for_timeout(400)
+            shot("06-逐搏明细")
 
-        # ---------------- 7. 单搏详情（Grad-CAM）----------------
-        try:
-            page.evaluate("window.scrollTo(0, 0)")
+            # 单搏详情与 Grad-CAM
+            page.locator("[data-test='beat-rows'] tbody tr").nth(3).click()
+            page.wait_for_timeout(900)
+            page.locator("h3").filter(has_text="五类概率").scroll_into_view_if_needed()
+            page.wait_for_timeout(400)
+            shot("07-单搏详情与GradCAM")
+
+            # 波形交互（作为"补齐桌面版能力"的验收证据）
+            print("\n[波形交互]")
+            strip = page.locator(".ecg-strip").last
+            strip.scroll_into_view_if_needed()
+            page.wait_for_timeout(400)
+            wbox = page.locator("[data-test='wave-canvas']").last.bounding_box()
+            cx, cy = wbox["x"] + wbox["width"] * 0.5, wbox["y"] + wbox["height"] * 0.5
+            page.mouse.move(cx, cy)
+            page.mouse.wheel(0, -700)
+            page.wait_for_timeout(600)
+            shot_el(strip, "08-波形缩放")
+
+            page.mouse.move(cx, cy)
+            page.mouse.down()
+            page.mouse.move(cx + 150, cy, steps=15)
+            page.mouse.up()
+            page.wait_for_timeout(600)
+            shot_el(strip, "09-波形平移")
+
+            page.mouse.dblclick(cx, cy)
+            page.wait_for_timeout(500)
+            page.mouse.move(cx - 120, cy - 30)
+            page.wait_for_timeout(600)
+            shot_el(strip, "10-悬停十字线读数")
+
+            # 划分提示：训练集
+            page.locator("[data-test='split-note']").scroll_into_view_if_needed()
+            page.wait_for_timeout(400)
+            shot("11-数据划分提示-训练集记录")
+
+            # 保存报告
+            print("\n[保存与历史]")
+            page.click("[data-test='save-btn']")
+            page.wait_for_timeout(3500)
+            page.locator("[data-test='save-btn']").scroll_into_view_if_needed()
             page.wait_for_timeout(300)
-            rows = page.query_selector_all("#beatRows tr")
-            if len(rows) > 3:
-                rows[3].click()                      # 点一个非首搏，展示交互
-            page.wait_for_timeout(1100)
-            page.evaluate(
-                "document.querySelector('#beatCanvas')?.scrollIntoView({block:'center'})"
-            )
-            page.wait_for_timeout(700)
-            shot(page, "07-单搏详情与GradCAM.png", wait=0.5)
-        except Exception as e:
-            errors.append(f"单搏详情: {e}")
+            shot("12-保存报告")
 
-        # ---------------- 8. 保存报告 ----------------
-        try:
-            if page.query_selector("#saveBtn"):
-                page.evaluate("window.scrollTo(0, 0)")
-                page.fill("#saveTitle", "课堂演示 · 记录208室性早搏分析")
-                page.click("#saveBtn")
-                page.wait_for_timeout(2500)
-                page.evaluate("window.scrollTo(0, 0)")
-                shot(page, "08-保存报告.png", wait=0.6)
-        except Exception as e:
-            errors.append(f"保存报告: {e}")
+            # 测试集记录：再来一份，并截"划分提示-测试集"
+            page.select_option("[data-test='rec-select']", RECORD_TEST)
+            page.wait_for_timeout(1500)
+            page.click("[data-test='analyze-btn']")
+            page.wait_for_selector("[data-test='split-note']", timeout=60000)
+            page.wait_for_timeout(800)
+            page.locator("[data-test='split-note']").scroll_into_view_if_needed()
+            page.wait_for_timeout(400)
+            shot("13-数据划分提示-测试集记录")
+            page.click("[data-test='save-btn']")
+            page.wait_for_timeout(3500)
 
-        # ---------------- 9. 历史记录 ----------------
-        page.goto(base + "/history", wait_until="networkidle")
-        shot(page, "09-历史记录.png", full=True, wait=0.9)
+            # 历史列表
+            page.click(".nav a[href='/history']")
+            page.wait_for_selector("[data-test='history-table']")
+            page.wait_for_timeout(800)
+            shot("14-历史记录", full=True)
 
-        # ---------------- 10. 历史详情 ----------------
-        try:
-            link = page.query_selector("tbody tr a.btn")
-            if link:
-                link.click()
-                page.wait_for_load_state("networkidle")
-                page.wait_for_timeout(1600)
-                shot(page, "10-历史详情.png", wait=0.8)
-        except Exception as e:
-            errors.append(f"历史详情: {e}")
-
-        # ---------------- 11~12. 关于页 ----------------
-        page.goto(base + "/about", wait_until="networkidle")
-        shot(page, "11-关于与技术原理.png", full=True, wait=1.0)
-
-        try:
-            page.evaluate(
-                "document.querySelector('img[alt=\"混淆矩阵\"]')"
-                "?.scrollIntoView({block:'center'})"
-            )
+            # 历史详情
+            page.locator("[data-test='history-table'] tbody tr").first.click()
+            page.wait_for_selector("[data-test='split-note']", timeout=30000)
             page.wait_for_timeout(900)
-            shot(page, "12-评估结果与混淆矩阵.png", wait=0.6)
-        except Exception as e:
-            errors.append(f"评估结果: {e}")
+            shot("15-历史详情", full=True)
 
-        # ---------------- 13~14. 数据划分提示（训练集 / 测试集对照）----------------
-        # 记录 208 属训练集 DS1，模型训练时见过该患者，界面必须明示"一致率偏高、
-        # 不能当作泛化能力"；记录 100 属测试集 DS2，训练全程不可见。
-        # 两张图对照，体现项目对指标口径的诚实交代——这是本项目的设计要点之一。
-        try:
-            page.goto(base + "/analyze", wait_until="networkidle")
-            page.wait_for_timeout(2200)
-            page.select_option("#recSel", "208")
+            # ---------------------------------------------------- 关于页
+            print("\n[关于页]")
+            page.click(".nav a[href='/about']")
+            page.locator("h2").filter(has_text="已知局限").wait_for(timeout=20000)
+            page.wait_for_timeout(900)
+            shot("16-关于-项目与技术原理", full=True)
+            page.locator("h2").filter(has_text="评估结果").first.scroll_into_view_if_needed()
+            page.wait_for_timeout(700)
+            shot("17-关于-评估结果与混淆矩阵")
+            page.locator("h2").filter(has_text="已知局限").scroll_into_view_if_needed()
             page.wait_for_timeout(600)
-            page.click("#analyzeBtn")
-            page.wait_for_selector("#resultArea .alert-warn", timeout=30000)
-            page.wait_for_timeout(1200)
-            page.evaluate(
-                "document.querySelector('#resultArea .alert-warn')"
-                "?.scrollIntoView({block:'center'})"
-            )
-            page.wait_for_timeout(800)
-            shot(page, "13-数据划分提示-训练集记录.png", wait=0.5)
+            shot("18-关于-已知局限")
 
-            page.select_option("#recSel", "100")
+            # ---------------------------------------------------- 会话与移动端
+            print("\n[其他]")
+            page.goto(BASE + "/history", wait_until="load")
+            page.wait_for_selector("[data-test='session-notice']")
             page.wait_for_timeout(600)
-            page.click("#analyzeBtn")
-            page.wait_for_selector("#resultArea .alert-ok", timeout=30000)
-            page.wait_for_timeout(1200)
-            page.evaluate(
-                "document.querySelector('#resultArea .alert-ok')"
-                "?.scrollIntoView({block:'center'})"
-            )
-            page.wait_for_timeout(800)
-            shot(page, "14-数据划分提示-测试集记录.png", wait=0.5)
-        except Exception as e:
-            errors.append(f"数据划分提示: {e}")
-            print(f"[截图] ✗ 数据划分提示 -> {e}")
+            shot("19-会话隔离提示")
 
-        ctx.close()
-        browser.close()
+            # 新会话（无历史）展示空状态
+            fresh = browser.new_context(viewport=VIEWPORT, device_scale_factor=2,
+                                        locale="zh-CN")
+            fpage = fresh.new_page()
+            fpage.goto(BASE + "/history", wait_until="load")
+            fpage.wait_for_selector("text=本浏览器还没有保存过", timeout=20000)
+            fpage.wait_for_timeout(600)
+            fpage.screenshot(path=str(OUT_DIR / "20-新会话空历史.png"), full_page=True)
+            shots.append(OUT_DIR / "20-新会话空历史.png")
+            print("  ✓ 20-新会话空历史.png")
+            fresh.close()
 
-    if proc:
+            # 移动端视口
+            mobile = browser.new_context(viewport=MOBILE, device_scale_factor=3,
+                                         locale="zh-CN", is_mobile=True,
+                                         has_touch=True)
+            mpage = mobile.new_page()
+            mpage.goto(BASE + "/", wait_until="load")
+            mpage.wait_for_selector(".hero", timeout=20000)
+            mpage.wait_for_timeout(700)
+            mpage.screenshot(path=str(OUT_DIR / "21-移动端-首页.png"), full_page=True)
+            shots.append(OUT_DIR / "21-移动端-首页.png")
+            print("  ✓ 21-移动端-首页.png")
+            mpage.goto(BASE + "/analyze", wait_until="load")
+            mpage.wait_for_selector("[data-test='wave-canvas']", timeout=25000)
+            mpage.wait_for_timeout(1200)
+            mpage.screenshot(path=str(OUT_DIR / "22-移动端-分析页.png"), full_page=True)
+            shots.append(OUT_DIR / "22-移动端-分析页.png")
+            print("  ✓ 22-移动端-分析页.png")
+            mobile.close()
+
+            browser.close()
+    finally:
         proc.terminate()
-        print("[截图] 已关闭临时启动的 Flask 服务")
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        if args.keep:
+            print(f"\n临时目录已保留：{tmp}")
+        else:
+            shutil.rmtree(tmp, ignore_errors=True)
 
-    print(f"\n[截图] 完成：成功 {len(saved)} 张，失败 {len(errors)} 张")
-    print(f"[截图] 输出目录：{OUT_DIR}")
-    for e in errors:
-        print(f"        失败 -> {e}")
-    return 0 if saved else 1
+    print(f"\n共生成 {len(shots)} 张截图，位于 {OUT_DIR}")
+    return 0
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    sys.exit(main())

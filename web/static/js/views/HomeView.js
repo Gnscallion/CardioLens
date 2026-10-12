@@ -68,6 +68,12 @@ export default {
         </div>
       </section>
 
+      <!--
+        免责声明放在首屏显眼处，而不是页面末尾：页脚已有一份，放在末尾会
+        与页脚紧邻重复；放在顶部则既显著，又不会让人误以为可以跳过。
+      -->
+      <DisclaimerNote :text="store.disclaimer" />
+
       <div class="alert alert-err" v-if="!store.ready" data-test="not-ready">
         <span class="ic">⚠️</span>
         <span><strong>服务尚未就绪。</strong>{{ store.readyMessage }}</span>
@@ -144,8 +150,6 @@ export default {
           </p>
         </div>
       </div>
-
-      <DisclaimerNote :text="store.disclaimer" />
     </div>
   `,
 };

@@ -55,6 +55,8 @@ export default {
         </p>
       </div>
 
+      <DisclaimerNote :text="store.disclaimer" />
+
       <div class="card">
         <h2>数据来源与划分</h2>
         <dl class="kv">
@@ -234,8 +236,6 @@ export default {
           服务端不接受上传，意味着使用者的本地数据不会被传输到服务器。
         </p>
       </div>
-
-      <DisclaimerNote :text="store.disclaimer" />
     </div>
   `,
 };
