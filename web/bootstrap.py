@@ -96,6 +96,35 @@ def warmup() -> None:
         log.exception("模型预热失败：%s", exc)
 
 
+def _warn_if_exposed(host: str, app_env: str) -> None:
+    """监听在所有网卡上时给出明确警告。
+
+    **应用监听地址与公网暴露方式必须分开**：
+    本应用是设计成只监听回环、由 nginx 对外提供 HTTPS 的——
+    TLS 终止、静态资源直出、请求体上限、真实来源 IP 都依赖这一层。
+    一旦直接监听 0.0.0.0，就等于把 Flask 的裸 HTTP 端口摆到公网上：
+    没有 TLS，Cookie 的 Secure 属性形同虚设，限流也会退化成按容器/网关 IP 计数。
+
+    默认值是 127.0.0.1，所以正常部署不会走到这里；这条日志是防"显式改错"。
+    """
+    if host not in ("0.0.0.0", "::", "*", ""):
+        return
+
+    if app_env == "production":
+        log.warning(
+            "⚠️  正在监听 %s（所有网卡）。生产环境不应这样部署：\n"
+            "     · 应用将绕过反向代理直接对外，没有 TLS\n"
+            "     · SESSION_COOKIE_SECURE 的 Cookie 在明文 HTTP 下无法送达\n"
+            "     · 限流按来源 IP 统计时会退化（所有请求都来自网关）\n"
+            "    正确做法：CARDIOLENS_HOST=127.0.0.1，由 nginx 终止 TLS 并反向代理。\n"
+            "    若这确实是刻意的（如容器内由前置代理转发），请忽略本提示。",
+            host,
+        )
+    else:
+        log.info("提示：正在监听 %s（所有网卡），局域网内其他机器可访问。"
+                 "生产部署请改为 127.0.0.1 + 反向代理。", host)
+
+
 def startup(app, config_cls=None) -> None:
     """按顺序完成启动装配。"""
     setup_logging()
@@ -108,6 +137,8 @@ def startup(app, config_cls=None) -> None:
     log.info("运行环境：%s    数据目录：%s", app.config.get("APP_ENV"), C.STORE_DIR)
     log.info("监听：http://%s:%s", host, port)
     log.info("=" * 58)
+
+    _warn_if_exposed(host, app.config.get("APP_ENV"))
 
     # 延迟到日志就绪后再报告配置问题，保证警告一定被记下来
     warn = getattr(config_cls, "warn_if_default", None)

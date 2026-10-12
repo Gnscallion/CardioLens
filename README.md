@@ -242,10 +242,11 @@ server {
 ```bash
 python scripts/test_web.py        # 离线自测（Flask test_client），144 个断言
 python scripts/test_web_e2e.py    # 端到端（真实 HTTP + 真实 waitress 进程），69 个断言
+python scripts/test_web_ui.py     # 前端验收（真实浏览器 + 画布像素判据），23 个断言
 python scripts/screenshot.py      # 重新生成界面截图到 docs/screenshots_web/
 ```
 
-两套测试实测 **144 / 144** 与 **69 / 69 全部通过**。端到端脚本会自己拉起一个 waitress 进程，
+三套测试实测 **144 / 144**、**69 / 69** 与 **23 / 23 全部通过**。端到端脚本会自己拉起一个 waitress 进程，
 并把可写数据目录指向临时位置，**不会污染真实数据库**。
 
 ### 3.6 运维工具
@@ -296,6 +297,7 @@ medicalAI/
 ├── scripts/
 │   ├── test_web.py             # ★ 离线自测（144 个断言）
 │   ├── test_web_e2e.py         # ★ 端到端测试（真实 HTTP + 真实 WSGI）
+│   ├── test_web_ui.py          # ★ 前端验收（Playwright 驱动真实浏览器）
 │   ├── screenshot.py           #   界面截图（生成 docs/screenshots_web/）
 │   ├── migrate_owner.py        #   处理无归属的遗留历史记录
 │   └── prune_db.py             #   数据库清理
@@ -596,7 +598,7 @@ A：数据库是 `CARDIOLENS_STORE` 下的 `app.db`（SQLite 单文件），直�
 | 评估 | scikit-learn | 混淆矩阵、逐类 PPV/Se/F1 |
 | 可视化图表 | Matplotlib | 训练曲线与混淆矩阵静态图（由关于页显示 PNG） |
 | 持久化 | SQLite（WAL 模式） | 免安装、免配置；WAL 让多人读写不互相阻塞 |
-| 自动化测试 | 自研两套脚本（离线 + 端到端） | 无额外依赖，覆盖推理一致性与会话隔离 |
+| 自动化测试 | 自研三套脚本（离线 / 端到端 / 前端验收） | 离线与端到端只用标准库；前端验收用 Playwright 驱动真实浏览器，因为波形交互只在浏览器里才存在 |
 
 > 上一版使用的 PySide6 / PyInstaller 已随桌面版一并下线，代码保留在 git 历史
 > （tag `pre-web-migration`）中。
