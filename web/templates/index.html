@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ boot.brand.name }} · {{ boot.brand.name_zh }}</title>
+  <meta name="description" content="{{ boot.brand.tagline }}">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🫀</text></svg>">
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <div id="app">
+    <noscript>
+      <div class="noscript">
+        <h1>需要启用 JavaScript</h1>
+        <p>本平台是单页应用，请在浏览器设置中启用 JavaScript 后重新打开。</p>
+      </div>
+    </noscript>
+  </div>
+
+  <!--
+    Vue 与 vue-router 由服务器本地提供，不走 CDN。
+    原因：公网部署的目标环境在国内，第三方 CDN 的可达性不稳定；
+    一旦 CDN 抖动，用户看到的是一片空白，而服务端健康检查一切正常，
+    排查成本极高。两个文件随仓库分发，仍然是零 npm、零构建。
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "vue": "/static/vendor/vue.esm-browser.prod.js",
+      "vue-router": "/static/vendor/vue-router.esm-browser.prod.js"
+    }
+  }
+  </script>
+
+  <script>
+    // 首屏数据由服务端内联，深链（如直接打开 /analyze?record=208）不必
+    // 等一次 /api/bootstrap 往返即可渲染。
+    window.__BOOT__ = {{ boot_json | safe }};
+  </script>
+  <script type="module" src="/static/js/main.js"></script>
+</body>
+</html>

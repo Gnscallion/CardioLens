@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ code }} · CardioLens</title>
+  <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+  <main class="error-page">
+    <p class="error-code">{{ code }}</p>
+    <h1>{{ message }}</h1>
+    <p class="muted">
+      如果反复出现，请稍后重试；若持续存在，请联系站点维护者。
+    </p>
+    <p class="error-actions">
+      <a class="btn btn-primary" href="/">返回首页</a>
+      <a class="btn" href="/analyze">去做分析</a>
+    </p>
+  </main>
+</body>
+</html>
