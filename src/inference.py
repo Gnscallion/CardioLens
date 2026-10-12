@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import threading
+from collections import OrderedDict
 from functools import lru_cache
 
 import numpy as np
@@ -20,6 +21,11 @@ from .rr import rr_pair_seconds
 # 一次分析窗口的长度上限（秒），防止前端传入超大区间拖垮服务
 MAX_WINDOW_SEC = 30.0
 MIN_WINDOW_SEC = 3.0
+
+# 信号缓存上限（条）。每条记录约 2.5 MB（110 MB / 44 条），若不设上限，
+# 44 条记录全部被访问后会长期占住约 110 MB——对多人共用的 Web 服务是压力。
+# 被逐出的记录下次访问时重新读盘，代价仅几十毫秒。
+SIGNAL_CACHE_MAX = 8
 
 
 class AnalysisError(Exception):
@@ -62,7 +68,7 @@ class ECGAnalyzer:
         self._model = None
         self._cam = None
         self._meta = None
-        self._signal_cache: dict[str, np.ndarray] = {}
+        self._signal_cache: OrderedDict[str, np.ndarray] = OrderedDict()
         self._annot_cache: dict[str, list] = {}
 
     # ------------------------------------------------------------ 资源加载
@@ -115,12 +121,26 @@ class ECGAnalyzer:
         return out
 
     def get_signal(self, record_id: str) -> np.ndarray:
-        if record_id not in self._signal_cache:
-            path = C.SIGNAL_DIR / f"{record_id}.npy"
-            if not path.exists():
-                raise AnalysisError(f"记录 {record_id} 的信号数据不存在")
-            self._signal_cache[record_id] = np.load(path)
-        return self._signal_cache[record_id]
+        """读取整条记录信号，带条数上限的 LRU 缓存。
+
+        缓存写入不加锁：两个线程同时未命中会各读一次盘，只是重复劳动，
+        不会产生错误结果（后写入的覆盖先写入的，内容相同）。
+        """
+        cached = self._signal_cache.get(record_id)
+        if cached is not None:
+            self._signal_cache.move_to_end(record_id)
+            return cached
+
+        path = C.SIGNAL_DIR / f"{record_id}.npy"
+        if not path.exists():
+            raise AnalysisError(f"记录 {record_id} 的信号数据不存在")
+        signal = np.load(path)
+
+        self._signal_cache[record_id] = signal
+        self._signal_cache.move_to_end(record_id)
+        while len(self._signal_cache) > SIGNAL_CACHE_MAX:
+            self._signal_cache.popitem(last=False)      # 逐出最久未用
+        return signal
 
     def get_annots(self, record_id: str) -> list[dict]:
         if record_id not in self._annot_cache:

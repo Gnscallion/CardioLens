@@ -10,28 +10,25 @@ import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------- 路径
-# 只读资源（模型、心电数据）与可写数据（数据库、日志）必须分开存放：
-#   * 开发运行时：两者都位于项目根目录下，与改动前完全一致；
-#   * 打包成 EXE 后：只读资源随包解压到临时目录（sys._MEIPASS），
-#     可写数据则落到用户目录 %LOCALAPPDATA%\CardioLens\。
-# 后者不能写进临时解压目录（程序退出即被清理），也不能写进程序安装目录
-# （可能没有写权限，且卸载会连带丢失用户历史）。
-APP_DIR_NAME = "CardioLens"
+# 只读资源（模型、心电数据）与可写数据（数据库、日志）分开存放：
+#   * 只读资源随代码走，部署时可整体只读；
+#   * 可写数据默认落在项目根的 store/，生产部署用环境变量 CARDIOLENS_STORE
+#     显式指定（如 /var/lib/cardiolens），使代码目录无需写权限。
 
 
 def _resource_root() -> Path:
-    """只读资源根目录：打包后为解压目录，开发时为项目根目录。"""
-    if getattr(sys, "frozen", False):          # PyInstaller 打包后
-        return Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    """只读资源根目录（模型、心电数据）。"""
     return Path(__file__).resolve().parent.parent
 
 
 def _user_data_dir() -> Path:
-    """可写数据目录（SQLite 数据库、日志）。"""
-    if getattr(sys, "frozen", False):
-        base = os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData" / "Local")
-        return Path(base) / APP_DIR_NAME
-    return Path(__file__).resolve().parent.parent / "store"
+    """可写数据目录（SQLite 数据库、日志）。
+
+    生产部署建议显式设置 CARDIOLENS_STORE 指向持久化卷；不设置时
+    落在代码目录下的 store/，适用于开发与单机运行。
+    """
+    env = os.environ.get("CARDIOLENS_STORE")
+    return Path(env) if env else Path(__file__).resolve().parent.parent / "store"
 
 
 ROOT = _resource_root()
@@ -56,6 +53,11 @@ RECORD_META = DATA_PROCESSED / "record_meta.json"
 MODEL_PATH = MODEL_DIR / "ecg_cnn.pt"
 METRICS_PATH = MODEL_DIR / "metrics.json"
 DB_PATH = STORE_DIR / "app.db"
+
+# 历史记录时间的基准时区。created_at 是人类可读的本地时间字符串，服务端时区
+# 一变，"3 分钟前"这类相对时间就会算错；因此写入与解析都显式使用本常量，
+# 并额外提供 created_at_ts（epoch 秒）供前端计算相对时间。
+TZ_NAME = "Asia/Shanghai"
 
 # ---------------------------------------------------------------- 信号参数
 FS = 360                 # MIT-BIH 采样率 360 Hz
