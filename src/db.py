@@ -135,6 +135,13 @@ def init_db() -> None:
         conn.executescript(SCHEMA)
         _migrate(conn)
         conn.executescript(INDEXES)
+    # 科研实验表与历史分析表共用同一个 SQLite 数据库文件。
+    from . import research_db
+    research_db.init_db()
+    from . import auth_db
+    auth_db.init_db()
+    from . import notifications_db
+    notifications_db.init_db()
 
 
 # ================================================================ 写入

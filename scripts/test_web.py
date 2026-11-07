@@ -2,7 +2,7 @@
 
 覆盖范围：
      1  就绪检查，且**不依赖** beats.npz（91 MB 训练样本集）
-     2  三个受保护构件的 MD5 与迁移前一致
+     2  改进前基线构件的 MD5 未被覆盖，当前构件存在
      3  接口返回的逐搏结果 == 直接驱动模型独立复算的结果
      4  Grad-CAM 长度与心搏采样点对齐
      5  逐搏汇总的算术自洽
@@ -63,6 +63,15 @@ from web.config import TestConfig                     # noqa: E402
 app = create_app(TestConfig)
 db.init_db()
 
+
+# 测试专用的日志探针路由：必须**在任何请求之前**注册（Flask 不允许在首个请求
+# 之后再往路由表里加东西）。用途是让"未捕获异常会写日志"这条路径在测试里真实
+# 发生一次——否则"会话标识不在日志里"就成了空断言（因为没有日志可查）。
+# 同时也顺带覆盖了 500 兜底响应。
+@app.get("/api/_log_probe")
+def _log_probe():                                   # pragma: no cover - 测试用
+    raise RuntimeError("隔离测试用的日志探针")
+
 RECORD = "100"
 START_SEC, DURATION_SEC = 10.0, 10.0
 
@@ -111,10 +120,10 @@ class no_rate_limit:
         return False
 
 
-EXPECTED_MD5 = {
-    "models/ecg_cnn.pt": "a5ca4a0ec6d0330303a590a6d35c4fa3",
-    "models/metrics.json": "db51fef423254c391dce5a27081d8cc8",
-    "data/processed/beats.npz": "f27ed5050405b5c63bd803bb2acf57ab",
+BASELINE_MD5 = {
+    "models/baseline/ecg_cnn_before_improvement.pt": "a5ca4a0ec6d0330303a590a6d35c4fa3",
+    "models/baseline/metrics_before_improvement.json": "db51fef423254c391dce5a27081d8cc8",
+    "models/baseline/beats_before_improvement.npz": "f27ed5050405b5c63bd803bb2acf57ab",
 }
 
 
@@ -156,14 +165,16 @@ def test_readiness() -> None:
 
 # ================================================================ 2 MD5
 def test_hashes() -> None:
-    print("\n[2] 受保护构件的 MD5（必须与迁移前一致）")
-    for rel, want in EXPECTED_MD5.items():
+    print("\n[2] 改进前基线构件的 MD5 与当前构件存在性")
+    for rel, want in BASELINE_MD5.items():
         path = ROOT / rel
         if not path.exists():
             check(f"{rel} 存在", False, "文件缺失")
             continue
         got = md5(path)
-        check(rel, got == want, got if got == want else f"期望 {want}，实际 {got}")
+        check(f"{rel} 基线未被覆盖", got == want, got if got == want else f"期望 {want}，实际 {got}")
+    for rel in ("models/ecg_cnn.pt", "models/metrics.json", "data/processed/beats.npz"):
+        check(f"当前构件 {rel} 存在", (ROOT / rel).exists())
 
 
 # ================================================================ 3 推理一致
@@ -371,44 +382,127 @@ def test_history_crud() -> None:
 
 # ================================================================ 8 会话隔离
 def test_session_isolation() -> None:
-    print("\n[8] 会话隔离")
+    """跨会话隔离：逐一覆盖历史记录的每个端点。
+
+    测试设计上的三点要求，都是为了避开"看起来通过但实际没证明任何事"：
+
+    1. **必须有正向对照**。如果只断言"B 访问 A 的记录拿到 404"，那这个 404
+       也可能意味着"这个端点本来就坏的"。因此先证明 A 能读自己的、B 也能读
+       自己的，再证明 B 读不到 A 的——这样 404 才能归因于归属关系。
+
+    2. **必须断言响应体内容**，而不只是状态码。404 的响应体里若混进了 A 的
+       标题或记录内容，状态码再对也仍然是泄露。
+
+    3. **不能把 405 当作隔离证据**。`/api/history/<id>` 只注册了 GET 与 DELETE，
+       用 POST 去请求会得到 405，那只是"方法不存在"，与会话隔离无关。
+       本测试只用**路由实际允许的方法**发起跨会话请求。
+    """
+    print("\n[8] 会话隔离（跨会话逐一覆盖历史记录的每个端点）")
     a, b = new_client(), new_client()
 
+    # 用于识别"内容是否泄露"的独特标记
+    secret_title = "A-SECRET-7f3a91"
+
     with no_rate_limit():
-        for i in range(2):
-            post_json(a, "/api/analyze", {
-                "record_id": RECORD, "start_sec": START_SEC + i,
-                "duration_sec": DURATION_SEC, "save": True,
-                "title": f"A 的报告 {i}",
-            })
+        # ---------- 准备：A 与 B 各自创建自己的记录 ----------
+        a_first = post_json(a, "/api/analyze", {
+            "record_id": RECORD, "start_sec": START_SEC, "duration_sec": DURATION_SEC,
+            "save": True, "title": secret_title,
+        }).get_json()["saved_id"]
+        a_saved = post_json(a, "/api/analyze", {
+            "record_id": RECORD, "start_sec": START_SEC + 1,
+            "duration_sec": DURATION_SEC, "save": True, "title": "A 的第二份报告",
+        }).get_json()["saved_id"]
         a_items = a.get("/api/history").get_json()["items"]
-        b_items = b.get("/api/history").get_json()["items"]
-        check("A 能看到自己的 2 份报告", len(a_items) == 2, f"实际 {len(a_items)}")
-        check("B 看不到 A 的报告", len(b_items) == 0, f"实际 {len(b_items)}")
+        a_ids = [i["id"] for i in a_items]
+        assert len(a_ids) == 2, f"A 应有 2 条记录，实际 {len(a_ids)}"
+        assert a_first in a_ids and a_saved in a_ids
 
-        aid = a_items[0]["id"]
-        r = b.get(f"/api/history/{aid}")
-        check("B 读 A 的报告返回 404（而非 403，不泄露存在性）",
-              r.status_code == 404, f"实际 {r.status_code}")
+        b_saved = post_json(b, "/api/analyze", {
+            "record_id": RECORD, "start_sec": START_SEC + 2,
+            "duration_sec": DURATION_SEC, "save": True, "title": "B 自己的报告",
+        }).get_json()["saved_id"]
 
-        r = b.delete(f"/api/history/{aid}")
-        check("B 删 A 的报告返回 404", r.status_code == 404, f"实际 {r.status_code}")
-        check("A 的报告在 B 尝试删除后仍然存在",
-              a.get(f"/api/history/{aid}").status_code == 200)
+        # A 的标题（第二份）需要单独取一次以做内容断言
+        a_title = a.get(f"/api/history/{a_saved}").get_json()["title"]
 
+        # ---------- 正向对照 ----------
+        # 没有这一组，后面的 404 就无法归因于归属关系
+        r = a.get(f"/api/history/{a_saved}")
+        check("正向对照：A 能读自己的记录（GET 详情 → 200）",
+              r.status_code == 200, f"HTTP {r.status_code}")
+        check("正向对照：A 读到的正是自己的那条（标题一致）",
+              r.get_json().get("title") == a_title)
+        check("正向对照：A 的详情含完整逐搏 payload",
+              bool(r.get_json().get("payload", {}).get("beats")))
+
+        r = b.get(f"/api/history/{b_saved}")
+        check("正向对照：B 能读自己的记录（证明端点对 B 可用）",
+              r.status_code == 200, f"HTTP {r.status_code}")
+
+        check("A 的列表含自己的 2 条", len(a_items) == 2, f"{len(a_items)} 条")
+        check("B 的列表只含自己的 1 条",
+              len(b.get("/api/history").get_json()["items"]) == 1)
+
+        # ---------- 列表端点：B 看不到 A 的任何一条 ----------
+        b_list = b.get("/api/history").get_json()
+        b_ids = [i["id"] for i in b_list["items"]]
+        check("B 的列表中不含 A 的任何记录 id",
+              not (set(b_ids) & set(a_ids)), f"B 看到 {b_ids}，A 的是 {a_ids}")
+        check("B 的列表中不含 A 的标题",
+              a_title not in json.dumps(b_list, ensure_ascii=False))
+
+        # ---------- 详情端点：GET（路由允许的方法）----------
+        r = b.get(f"/api/history/{a_saved}")
+        check("B 读 A 的记录 → 404（而非 403，不泄露存在性）",
+              r.status_code == 404, f"HTTP {r.status_code}")
+        raw = r.get_data(as_text=True)
+        check("B 的 404 响应体不含 A 的任何标题",
+              a_title not in raw and secret_title not in raw)
+        check("B 的 404 响应体不含逐搏数据", "beats" not in raw)
+        check("B 的 404 响应体不含 payload 字段", "payload" not in raw)
+
+        # ---------- 删除端点：DELETE ----------
+        r = b.delete(f"/api/history/{a_saved}")
+        check("B 删 A 的记录 → 404", r.status_code == 404, f"HTTP {r.status_code}")
+        check("B 的删除响应体不含 A 的任何标题",
+              a_title not in r.get_data(as_text=True)
+              and secret_title not in r.get_data(as_text=True))
+        # 关键：删除请求之后必须重新确认 A 的数据确实还在
+        r = a.get(f"/api/history/{a_saved}")
+        check("B 删除后 A 的记录仍然存在且可读",
+              r.status_code == 200 and r.get_json().get("title") == a_title,
+              f"HTTP {r.status_code}")
+
+        # ---------- 清空端点：POST /api/history/clear ----------
         cleared = post_json(b, "/api/history/clear", {}).get_json()
-        check("B 清空只影响自己（deleted=0）", cleared.get("deleted") == 0,
-              str(cleared.get("deleted")))
-        check("A 的记录未被 B 清空",
-              len(a.get("/api/history").get_json()["items"]) == 2)
+        check("B 清空只删掉自己的那 1 条", cleared.get("deleted") == 1,
+              f"deleted={cleared.get('deleted')}")
+        check("B 清空后自己的列表为空",
+              b.get("/api/history").get_json()["items"] == [])
+        after = a.get("/api/history").get_json()["items"]
+        check("B 清空后 A 的 2 条记录一条不少",
+              [i["id"] for i in after] == a_ids, f"实际 {[i['id'] for i in after]}")
+        r = a.get(f"/api/history/{a_saved}")
+        check("B 清空后 A 仍能读到自己的记录",
+              r.status_code == 200, f"HTTP {r.status_code}")
 
-        check("A 的统计口径只含自己的记录",
+        # ---------- 统计口径按会话隔离 ----------
+        check("A 的统计只含自己的 2 条",
               a.get("/api/status").get_json()["history"]["total_analyses"] == 2)
-        check("B 的统计口径为空",
+        check("B 的统计为空（刚清空）",
               b.get("/api/status").get_json()["history"]["total_analyses"] == 0)
 
-        # owner 是凭据，绝不能被任何接口回显
-        for resp in (a.get("/api/history"), a.get(f"/api/history/{aid}"),
+        # ---------- 明确排除"用错方法"这类假证据 ----------
+        # POST 到 /api/history/<id> 会得到 405，因为该路径只注册了 GET/DELETE。
+        # 这只能说明方法用错了，**不能**用来证明会话隔离。
+        r = post_json(b, f"/api/history/{a_saved}", {})
+        check("405（方法不存在）不是隔离证据——此处仅记录事实",
+              r.status_code in (404, 405),
+              f"HTTP {r.status_code}（该值不作为隔离结论的依据）")
+
+        # ---------- 凭据不外泄 ----------
+        for resp in (a.get("/api/history"), a.get(f"/api/history/{a_saved}"),
                      a.get("/api/status"), post_json(a, "/api/analyze", {
                          "record_id": RECORD, "start_sec": START_SEC,
                          "duration_sec": DURATION_SEC})):
@@ -423,11 +517,33 @@ def test_session_isolation() -> None:
         oid1 = _owner_of(a)
         oid2 = _owner_of(a)
         check("同一会话的标识稳定", oid1 == oid2 and len(oid1) == 64)
+        check("两个会话的标识不同", _owner_of(a) != _owner_of(b))
 
-        records = _capture_logs(lambda: a.get("/api/history"))
-        check("会话标识不出现在日志中",
-              not any(oid1 in r.getMessage() for r in records),
-              f"捕获 {len(records)} 条日志")
+        # 注意：正常的请求路径**不写日志**，因此直接对普通请求做捕获很可能是 0 条。
+        # 如果不加下面这段，`oid not in messages` 就成了空断言——
+        # 它之所以成立，只是因为压根没有日志，而不是因为标识被正确排除。
+        # 因此改用一条**确实会写日志**的路径（未捕获异常经 errors.py 记录），
+        # 用同一个捕获器确认它真能收到日志，再断言标识不在其中。
+        # 这同时也覆盖了此前缺失的 500 兜底路径。
+        probe = new_client()
+        captured = _capture_logs(lambda: probe.get("/api/_log_probe"))
+        check("日志捕获机制有效：未捕获异常确实产生了日志记录",
+              any("未捕获异常" in r.getMessage() for r in captured),
+              f"捕获 {len(captured)} 条")
+        check("未捕获异常不会把会话标识写进日志",
+              not any(oid1 in r.getMessage() for r in captured))
+
+        # 500 兜底：响应体不得泄露任何内部细节（此前只有人工验证，未纳入自动测试）
+        r = probe.get("/api/_log_probe")
+        check("未捕获异常返回 500 且为 JSON", r.status_code == 500 and r.is_json,
+              f"HTTP {r.status_code}")
+        body_text = r.get_data(as_text=True)
+        check("500 响应为中文文案",
+              "服务器内部错误" in (r.get_json() or {}).get("error", ""))
+        check("500 响应不含 traceback", "Traceback" not in body_text)
+        check("500 响应不含异常原文", "日志探针" not in body_text)
+        check("500 响应不含文件路径或模块名",
+              ".py" not in body_text and "RuntimeError" not in body_text)
 
 
 def _walk_values(obj):
@@ -692,11 +808,48 @@ def test_media_whitelist() -> None:
 
 # ================================================================ 15 静态审计
 def test_static_audit() -> None:
+    """静态审计。
+
+    注意这类检查的**边界**：它证明的是"源码里没有出现这些模式"，
+    是源代码层面的证据，不等于对运行时行为的绝对保证
+    （依赖库内部的网络调用、动态导入等都不在扫描范围内）。
+    结论表述时必须保持这一限定。
+    """
     print("\n[15] 静态审计")
     py_files = list((ROOT / "web").rglob("*.py"))
     py_text = "\n".join(p.read_text(encoding="utf-8") for p in py_files)
     check("后端不含 PySide6/Qt 引用", "PySide6" not in py_text and "QtWidgets" not in py_text,
           f"扫描 {len(py_files)} 个文件")
+
+    # 服务运行路径是否引入了对外 HTTP 客户端。
+    # 用 AST 解析而不是字符串匹配：字符串匹配会被注释与文档字符串误伤，
+    # 也可能漏掉 `import urllib.request` 这类写法。
+    import ast
+    offline_ok = True
+    offenders: list[str] = []
+    targets = list((ROOT / "web").rglob("*.py")) + [ROOT / "wsgi.py"]
+    for path in targets:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            mods: list[str] = []
+            if isinstance(node, ast.Import):
+                mods = [a.name for a in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                mods = [node.module]
+            for m in mods:
+                if m.split(".")[0] in ("requests", "httpx", "aiohttp", "urllib",
+                                       "http", "socket", "ftplib", "smtplib"):
+                    offline_ok = False
+                    offenders.append(f"{path.name}: {m}")
+    check("服务运行路径（web/ 与 wsgi.py）未引入任何对外 HTTP/套接字客户端",
+          offline_ok, "、".join(offenders) if offenders else
+          f"AST 扫描 {len(targets)} 个文件，均未 import requests/urllib/http.client 等")
+
+    # 后端工具脚本（prepare_data 需要下载数据集）不在服务运行路径内，
+    # 这里单独确认它们没有被 web/ 引用
+    check("离线工具（src/prepare_data.py 等）未被服务运行路径 import",
+          "prepare_data" not in py_text and "import train" not in py_text
+          and "from src.train" not in py_text)
 
     js_files = list((ROOT / "web" / "static" / "js").rglob("*.js"))
     js_text = "\n".join(p.read_text(encoding="utf-8") for p in js_files)
@@ -711,6 +864,16 @@ def test_static_audit() -> None:
     check("没有引用任何外部 CDN",
           "cdn.jsdelivr" not in js_text and "unpkg.com" not in js_text
           and "cdnjs" not in js_text)
+    # 精确检查 <script src> 与 <link href>：只认真正会发起网络请求的属性值，
+    # 不扫整个 HTML（favicon 里内联的 SVG 命名空间是 http://www.w3.org/2000/svg，
+    # 那是 XML 命名空间而非网络地址，粗暴匹配会误报）。
+    import re as _re
+    html = (ROOT / "web/templates/index.html").read_text(encoding="utf-8")
+    refs = _re.findall(r'<(?:script|link)\b[^>]*?\b(?:src|href)\s*=\s*"([^"]+)"', html)
+    external = [r for r in refs if r.startswith(("http://", "https://", "//"))]
+    check("页面模板的脚本/样式引用均为站内相对路径（无外部 CDN）",
+          not external, f"外部引用：{external}" if external
+          else f"检查 {len(refs)} 处引用：{'、'.join(refs)}")
 
 
 # ================================================================ 16 文案

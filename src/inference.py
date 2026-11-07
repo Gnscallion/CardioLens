@@ -12,6 +12,7 @@ from functools import lru_cache
 
 import numpy as np
 import torch
+from scipy.signal import find_peaks
 
 from . import config as C
 from .gradcam import GradCAM1D
@@ -234,6 +235,17 @@ class ECGAnalyzer:
         abnormal = n - counts["N"]
 
         agree = sum(1 for b in beat_results if b["agree"])
+        # 可靠性指标：仅对有专家标注的真实数据计算，不对上传数据臆造标签。
+        confidences = np.asarray([b["confidence"] for b in beat_results], dtype=np.float32)
+        correctness = np.asarray([1.0 if b["agree"] else 0.0 for b in beat_results], dtype=np.float32)
+        ece = 0.0
+        for lo in np.linspace(0.0, 1.0, 11)[:-1]:
+            hi = lo + 0.1
+            mask = (confidences >= lo) & ((confidences < hi) if hi < 1 else (confidences <= hi))
+            if np.any(mask):
+                ece += float(np.sum(mask) / n) * abs(float(np.mean(confidences[mask])) - float(np.mean(correctness[mask])))
+        brier = float(np.mean([(sum(float(b["probs"].get(c, 0)) ** 2 for c in C.AAMI_CLASSES) - 2 * float(b["probs"].get(b["expert"], 0)) + 1) for b in beat_results]))
+        high_conf_errors = int(sum(1 for b in beat_results if b["confidence"] >= 0.9 and not b["agree"]))
         summary = {
             "n_beats": n,
             "counts": counts,
@@ -242,6 +254,9 @@ class ECGAnalyzer:
             "abnormal_ratio": round(abnormal / n, 4),
             "agreement": round(agree / n, 4),
             "mean_confidence": round(float(np.mean([b["confidence"] for b in beat_results])), 4),
+            "ece": round(ece, 5),
+            "brier_score": round(brier, 5),
+            "high_confidence_errors": high_conf_errors,
             "risk_level": self._risk_level(counts, n),
         }
 
@@ -284,6 +299,37 @@ class ECGAnalyzer:
             "beat_marks": marks,
             "n_beats_in_window": len(marks),
         }
+
+    def analyze_uploaded_signal(self, signal: np.ndarray, with_cam: bool = True) -> dict:
+        """分析用户上传的单导联信号；无专家标注，因此不计算 agreement。"""
+        signal = np.asarray(signal, dtype=np.float32).ravel()
+        if len(signal) < C.FS * 3:
+            raise AnalysisError('上传信号至少需要 3 秒')
+        max_len = min(len(signal), C.FS * 30)
+        signal = signal[:max_len]
+        centered = signal - np.median(signal)
+        distance = max(1, int(C.FS * 0.25))
+        prominence = max(float(np.std(centered) * 0.25), 1e-5)
+        peaks, _ = find_peaks(centered, distance=distance, prominence=prominence)
+        peaks = [int(p) for p in peaks if C.PRE_SAMPLES <= p < len(signal) - C.POST_SAMPLES]
+        if len(peaks) < 2:
+            raise AnalysisError('未检测到足够的有效 R 峰，请检查采样率或信号质量')
+        prev, nxt, median = rr_pair_seconds(peaks)
+        beats = np.stack([self._normalize(signal[p-C.PRE_SAMPLES:p+C.POST_SAMPLES]) for p in peaks]).astype(np.float32)
+        rr = np.asarray([C.rr_feature_vector(float(prev[i]), float(nxt[i]), float(median)) for i in range(len(peaks))], dtype=np.float32)
+        with self._lock:
+            self.model
+            x, rb = torch.from_numpy(beats[:, None, :]), torch.from_numpy(rr)
+            with torch.no_grad(): probs = torch.softmax(self._model(x, rb), dim=1).numpy()
+            preds = probs.argmax(axis=1)
+        result_beats=[]
+        for i,p in enumerate(peaks):
+            code=C.AAMI_CLASSES[int(preds[i])]
+            result_beats.append({'index':i+1,'sample':p,'abs_sample':p,'time_sec':round(p/C.FS,3),'pred':code,'pred_name':C.CLASS_NAMES_ZH[code],'confidence':round(float(probs[i,preds[i]]),4),'probs':{C.AAMI_CLASSES[k]:round(float(probs[i,k]),4) for k in range(len(C.AAMI_CLASSES))},'expert':'—','expert_name':'无专家标注','agree':False,'risk':C.CLASS_RISK[code],'rr_prev_sec':round(float(prev[i]),3),'rr_next_sec':round(float(nxt[i]),3),'rr_baseline_sec':round(float(median),3),'rr_prev_ratio':round(float(prev[i]/median),3) if median else 1.0,'rr_next_ratio':round(float(nxt[i]/median),3) if median else 1.0})
+        counts={c:0 for c in C.AAMI_CLASSES}
+        for b in result_beats: counts[b['pred']]+=1
+        n=len(result_beats); abnormal=n-counts['N']
+        return {'record_id':'uploaded','start_sec':0,'duration_sec':round(len(signal)/C.FS,2),'fs':C.FS,'signal':_round(signal,4),'n_samples':len(signal),'beats':result_beats,'summary':{'n_beats':n,'counts':counts,'counts_zh':{C.CLASS_NAMES_ZH[c]:counts[c] for c in C.AAMI_CLASSES},'abnormal_count':abnormal,'abnormal_ratio':round(abnormal/n,4),'agreement':None,'mean_confidence':round(float(np.mean([b['confidence'] for b in result_beats])),4),'risk_level':self._risk_level(counts,n)},'split':'外部上传数据','in_training_set':False,'classes':[{'code':c,'name':C.CLASS_NAMES_ZH[c],'desc':C.CLASS_DESC[c]} for c in C.AAMI_CLASSES],'disclaimer':C.DISCLAIMER}
 
     # ------------------------------------------------------------ 内部工具
     def _resolve_window(self, record_id: str, start_sec, duration_sec):

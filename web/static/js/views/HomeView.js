@@ -101,7 +101,7 @@ export default {
           <dd>{{ historyStats.total_analyses || 0 }} 份</dd>
         </dl>
         <p class="muted small" style="margin-top:10px">
-          分析历史与本浏览器绑定，不与其他使用者共享。
+          登录后分析历史与账号绑定，可跨设备访问；未登录时仅与当前浏览器绑定，不与其他使用者共享。
           <RouterLink to="/history">查看历史记录 →</RouterLink>
         </p>
       </div>

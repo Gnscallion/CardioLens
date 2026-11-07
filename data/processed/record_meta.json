@@ -27,6 +27,19 @@
       "split": "DS1（训练/验证）"
     },
     {
+      "id": "102",
+      "n_beats": 2186,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 99,
+        "S": 0,
+        "V": 4,
+        "F": 0,
+        "Q": 2083
+      },
+      "split": "DS1（训练/验证）"
+    },
+    {
       "id": "103",
       "n_beats": 2083,
       "duration_sec": 1805.6,
@@ -38,6 +51,19 @@
         "Q": 0
       },
       "split": "DS2（测试）"
+    },
+    {
+      "id": "104",
+      "n_beats": 2227,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 163,
+        "S": 0,
+        "V": 2,
+        "F": 0,
+        "Q": 2062
+      },
+      "split": "DS1（训练/验证）"
     },
     {
       "id": "105",
@@ -64,6 +90,19 @@
         "Q": 0
       },
       "split": "DS1（训练/验证）"
+    },
+    {
+      "id": "107",
+      "n_beats": 2137,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 0,
+        "S": 0,
+        "V": 59,
+        "F": 0,
+        "Q": 2078
+      },
+      "split": "DS2（测试）"
     },
     {
       "id": "108",
@@ -430,6 +469,19 @@
       "split": "DS1（训练/验证）"
     },
     {
+      "id": "217",
+      "n_beats": 2208,
+      "duration_sec": 1805.6,
+      "class_counts": {
+        "N": 244,
+        "S": 0,
+        "V": 162,
+        "F": 0,
+        "Q": 1802
+      },
+      "split": "DS2（测试）"
+    },
+    {
       "id": "219",
       "n_beats": 2154,
       "duration_sec": 1805.6,
@@ -600,15 +652,15 @@
       "desc": "无法归入上述类别的搏动，以及起搏器起搏/感知搏动。"
     }
   ],
-  "total_beats": 100694,
+  "total_beats": 109452,
   "class_totals": {
-    "N": 90088,
+    "N": 90594,
     "S": 2781,
-    "V": 7008,
+    "V": 7235,
     "F": 802,
-    "Q": 15
+    "Q": 8040
   },
-  "n_train": 51002,
-  "n_test": 49692,
+  "n_train": 55415,
+  "n_test": 54037,
   "source": "MIT-BIH Arrhythmia Database (PhysioNet) · HF 镜像 epr-labs/mit-bih-arrhythmia-database"
 }

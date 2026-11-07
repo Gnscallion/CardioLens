@@ -13,6 +13,8 @@ import AnalyzeView from './views/AnalyzeView.js';
 import HistoryDetailView from './views/HistoryDetailView.js';
 import HistoryView from './views/HistoryView.js';
 import HomeView from './views/HomeView.js';
+import ResearchView from './views/ResearchView.js';
+import AuthView from './views/AuthView.js';
 
 const NotFound = {
   name: 'NotFound',
@@ -41,6 +43,8 @@ export const router = createRouter({
       meta: { nav: 'history' },
     },
     { path: '/about', name: 'about', component: AboutView, meta: { nav: 'about' } },
+    { path: '/research', name: 'research', component: ResearchView, meta: { nav: 'research' } },
+    { path: '/auth', name: 'auth', component: AuthView, meta: { nav: 'auth' } },
     { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFound },
   ],
   scrollBehavior(to, from, saved) {
@@ -53,4 +57,6 @@ export const NAV_ITEMS = [
   { key: 'analyze', to: '/analyze', label: 'ECG 分析' },
   { key: 'history', to: '/history', label: '分析历史' },
   { key: 'about', to: '/about', label: '关于' },
+  { key: 'research', to: '/research', label: '科研实验' },
+  { key: 'auth', to: '/auth', label: '登录 / 注册' },
 ];

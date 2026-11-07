@@ -34,6 +34,9 @@ def current_owner() -> str:
     签名过的 Cookie，等价于「自签 token」但零存储、零清理任务，
     因此不再自己实现一套。
     """
+    account_id = session.get('account_id')
+    if account_id:
+        return f'account:{account_id}'
     oid = session.get(OWNER_KEY)
     if not oid:
         oid = secrets.token_hex(TOKEN_BYTES)

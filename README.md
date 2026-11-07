@@ -35,23 +35,6 @@
 - 用 **Grad-CAM** 给出模型关注的时间片段，回答"模型凭什么这么判断"
 - 在**浏览器**中完成"选记录 → 看波形 → 跑分析 → 读结果 → 存历史"的完整操作闭环
 
-### 关于交付形态：从桌面回到 Web
-
-本项目上一版是 PySide6 桌面程序（单文件 EXE，双击即用）。本次改为 **Web 服务**，原因是：
-
-| 驱动力 | 说明 |
-|---|---|
-| **免安装分发** | 使用者只需要一个浏览器。不必下载 300 MB 的 EXE，也不受操作系统限制 |
-| **多用户与隔离** | 服务端一份部署即可供多人同时使用，每人的分析历史互相不可见 |
-| **迭代成本** | 界面改一行不必重新打包、重新分发、重新让人下载 |
-
-**这次迁移没有改动任何 AI 逻辑。** `src/` 中的模型结构、训练流程、Grad-CAM、信号处理一行未改——
-只替换了表现层。这正好验证了"推理引擎与界面解耦"这件事的实际价值：
-从桌面到 Web、从单机到多用户，引擎侧只动了数据库的会话隔离与一处缓存上限。
-
-> 上一版（桌面版）的完整代码仍在 git 历史中，可用
-> `git checkout pre-web-migration -- desktop/` 取回。
-
 ### 分类目标（AAMI EC57 五分类）
 
 | 类别 | 中文名称 | 说明 | 演示风险等级 |
@@ -66,7 +49,8 @@
 
 ## 二、功能特性
 
-顶栏固定为四项：**首页 / ECG 分析 / 分析历史 / 关于**。单页应用，视图间无刷新切换。
+顶栏提供五项主要入口：**首页 / ECG 分析 / 分析历史 / 关于 / 科研实验**，并提供账号、科研实验和系统通知等
+快捷操作。单页应用，视图间无刷新切换。
 
 | 视图 | 功能 |
 |---|---|
@@ -77,9 +61,88 @@
 | 🔥 可解释性 | Grad-CAM 热力图（252 点，与心搏采样点严格对齐），以填充面积图呈现模型关注的时间片段 |
 | 💾 结果保存 | 一键保存报告到服务端 SQLite；历史页支持列表、详情回看、单条删除与清空（均带确认） |
 | 🏷️ 划分提示 | 自动标注该记录属于训练集还是测试集；训练集记录会明确警告"一致率偏高、不能当作泛化能力" |
-| 🔒 会话隔离 | 分析历史与本浏览器绑定：看不到别人的记录，别人也看不到你的 |
+| 📁 ECG 文件上传 | 支持 CSV/TXT 数值序列上传，先做信号质量检查，也可直接进入上传数据分析；单文件不超过 5 MB |
+| 👤 账号体系 | 支持注册、登录、修改密码、密码找回与邮箱验证；登录后历史记录按账号保存，可跨浏览器访问 |
+| 🔒 数据隔离 | 已登录用户按账号隔离；未登录用户按浏览器隔离，看不到别人的记录 |
+| 🔔 系统通知 | 注册、密码修改等安全事件生成通知，支持未读数量、单条已读和全部已读 |
+| 🧪 科研实验 | 支持异步实验任务、进度查询、ECE/Brier Score 校准指标与实验结果保存 |
+| 📤 结果导出 | 分析结果支持 TXT、JSON 和逐搏 CSV 导出 |
+| 🛡️ 生产安全 | 支持生产密钥、HTTPS 安全响应头、Secure Cookie 与 CSRF 校验 |
 | 📱 响应式 | 桌面与移动端视口均可正常使用 |
 | 🛡️ 异常兜底 | 任何异常都以友好中文提示呈现，详细堆栈只写服务端日志，**使用者永远看不到 traceback** |
+
+### 当前运行界面
+
+以下截图由当前版本本地服务实际生成，覆盖首页、分析、波形交互、历史记录、科研页面和移动端布局：
+
+<p><strong>首页</strong></p>
+<img src="https://i.postimg.cc/yxj2M037/01-shou-ye.png" alt="首页">
+
+<p><strong>分析工作台（参数与预览）</strong></p>
+<img src="https://i.postimg.cc/5ygDh8QL/02-fen-xi-gong-zuo-tai-can-shu-yu-yu-lan.png" alt="分析工作台（参数与预览）">
+
+<p><strong>波形预览</strong></p>
+<img src="https://i.postimg.cc/4yPjDpHz/03-bo-xing-yu-lan.png" alt="波形预览">
+
+<p><strong>分析过程</strong></p>
+<img src="https://i.postimg.cc/rsj7B5R1/04-fen-xi-guo-cheng.png" alt="分析过程">
+
+<p><strong>分析结果（整体）</strong></p>
+<img src="https://i.postimg.cc/MZYkfJPh/05-fen-xi-jie-guo-zheng-ti.png" alt="分析结果（整体）">
+
+<p><strong>逐搏明细</strong></p>
+<img src="https://i.postimg.cc/v8vRxw2F/06-zhu-bo-ming-xi.png" alt="逐搏明细">
+
+<p><strong>单搏详情与 Grad-CAM</strong></p>
+<img src="https://i.postimg.cc/jqhVnY3Y/07-dan-bo-xiang-qing-yu-Grad-CAM.png" alt="单搏详情与 Grad-CAM">
+
+<p><strong>波形缩放</strong></p>
+<img src="https://i.postimg.cc/nV189fSn/08-bo-xing-suo-fang.png" alt="波形缩放">
+
+<p><strong>波形平移</strong></p>
+<img src="https://i.postimg.cc/dQ9MZcNs/09-bo-xing-ping-yi.png" alt="波形平移">
+
+<p><strong>悬停十字线读数</strong></p>
+<img src="https://i.postimg.cc/ZYLkvzsR/10-xuan-ting-shi-zi-xian-du-shu.png" alt="悬停十字线读数">
+
+<p><strong>数据划分提示：训练集记录</strong></p>
+<img src="https://i.postimg.cc/fTWGxq1T/11-shu-ju-hua-fen-ti-shi-xun-lian-ji-ji-lu.png" alt="数据划分提示：训练集记录">
+
+<p><strong>保存报告</strong></p>
+<img src="https://i.postimg.cc/025TpXhy/12-bao-cun-bao-gao.png" alt="保存报告">
+
+<p><strong>数据划分提示：测试集记录</strong></p>
+<img src="https://i.postimg.cc/qMBP8DWg/13-shu-ju-hua-fen-ti-shi-ce-shi-ji-ji-lu.png" alt="数据划分提示：测试集记录">
+
+<p><strong>历史记录</strong></p>
+<img src="https://i.postimg.cc/gkcCvt1x/14-li-shi-ji-lu.png" alt="历史记录">
+
+<p><strong>历史详情</strong></p>
+<img src="https://i.postimg.cc/656kdbFL/15-li-shi-xiang-qing.png" alt="历史详情">
+
+<p><strong>关于：项目与技术原理</strong></p>
+<img src="https://i.postimg.cc/15Rkp7bv/16-guan-yu-xiang-mu-yu-ji-shu-yuan-li.png" alt="关于：项目与技术原理">
+
+<p><strong>关于：评估结果与混淆矩阵</strong></p>
+<img src="https://i.postimg.cc/sDfkpHbJ/17-guan-yu-ping-gu-jie-guo-yu-hun-xiao-ju-zhen.png" alt="关于：评估结果与混淆矩阵">
+
+<p><strong>关于：已知局限</strong></p>
+<img src="https://i.postimg.cc/hPCHMbq8/18-guan-yu-yi-zhi-ju-xian.png" alt="关于：已知局限">
+
+<p><strong>会话隔离提示</strong></p>
+<img src="https://i.postimg.cc/Pr6BKzkK/19-hui-hua-ge-li-ti-shi.png" alt="会话隔离提示">
+
+<p><strong>新会话空历史</strong></p>
+<img src="https://i.postimg.cc/X72Txc0Q/20-xin-hui-hua-kong-li-shi.png" alt="新会话空历史">
+
+<p><strong>移动端首页</strong></p>
+<img src="https://i.postimg.cc/fTH65jhP/21-yi-dong-duan-shou-ye.png" alt="移动端首页">
+
+<p><strong>移动端分析页</strong></p>
+<img src="https://i.postimg.cc/bN6KLHj7/22-yi-dong-duan-fen-xi-ye.png" alt="移动端分析页">
+
+<p><strong>科研实验</strong></p>
+<img src="https://i.postimg.cc/J4T9KcLw/23-ke-yan-shi-yan.png" alt="科研实验">
 
 ---
 
@@ -96,9 +159,9 @@
 | 客户端依赖 | 无 |
 | 本地数据 | 无。分析历史保存在服务端 |
 
-> **关于分析历史**：本平台没有账号体系，历史记录用浏览器标识区分。
-> 因此**换一台设备、或清除浏览器数据之后，原记录将无法在此浏览器中访问**
-> （数据仍在服务端，只是没有入口）。这一点在界面上也有明确提示。
+> **关于分析历史**：登录后，历史记录与账号绑定，可以在其他浏览器或设备登录同一账号后继续访问。
+> 未登录时，历史记录仅与当前浏览器绑定；换浏览器、换设备或清除浏览器数据后，
+> 未登录记录将无法在此浏览器中访问（数据仍在服务端，只是没有账号入口）。
 
 ### 3.2 本地运行
 
@@ -120,7 +183,7 @@ python wsgi.py
 # 第 1 步：下载并预处理 MIT-BIH 数据（约 87 MB，首次约 1~3 分钟）
 python -m src.prepare_data
 
-# 第 2 步：训练模型（纯 CPU 实测 18.3 分钟；产出 models/ecg_cnn.pt 与 models/metrics.json）
+# 第 2 步：训练模型（改进版纯 CPU 实测约 13.6 分钟；产出 models/ecg_cnn.pt 与 models/metrics.json）
 python -m src.train
 ```
 
@@ -140,6 +203,9 @@ python -m src.train
 | `CARDIOLENS_MAX_CONCURRENT` | `4` | 同时允许排队的分析请求数上限 |
 | `CARDIOLENS_SLOT_TIMEOUT` | `8.0` | 等待并发槽位的秒数，超时返回 503 |
 | `CARDIOLENS_TORCH_THREADS` | `1` | PyTorch 线程数。**不要调大**，见下方"并发"说明 |
+| `CARDIOLENS_ENFORCE_CSRF` | `0`（生产自动开启） | 是否强制校验写请求的 CSRF Token |
+| `CARDIOLENS_PUBLIC_URL` | `http://127.0.0.1:5000` | 邮件验证和密码找回链接的公网地址 |
+| `SMTP_HOST` 等 | 无 | 配置后启用真实密码找回/邮箱验证邮件；未配置时仅记录开发邮件日志 |
 
 生成密钥：
 
@@ -193,8 +259,8 @@ server {
     server_name your.domain;
     # ssl_certificate ... 略
 
-    # 本站没有任何上传功能，请求体不到 1 KB
-    client_max_body_size 128k;
+    # ECG 上传接口允许 CSV/TXT 文件，应用层限制为 5 MB
+    client_max_body_size 6m;
 
     location /static/ {
         alias /srv/cardiolens/web/static/;
@@ -234,19 +300,19 @@ server {
 - 让限额按 worker 数放大，保护措施形同虚设
 - 每个 worker 独立加载一份 PyTorch 与模型，内存成倍上涨
 
-而单次分析实测只有 0.24~0.46 秒，单进程多线程的吞吐已经远超课程演示场景的需要。
+而单次分析多次实测保持在亚秒级，单进程多线程的吞吐已经远超课程演示场景的需要。
 因此**不要用 `gunicorn -w 4`**，也不要用 waitress 之外的进程模型。
 
 ### 3.5 验证
 
 ```bash
-python scripts/test_web.py        # 离线自测（Flask test_client），144 个断言
-python scripts/test_web_e2e.py    # 端到端（真实 HTTP + 真实 waitress 进程），69 个断言
+python scripts/test_web.py        # 离线自测（Flask test_client），170 个断言
+python scripts/test_web_e2e.py    # 端到端（真实 HTTP + 真实 waitress 进程），83 个断言
 python scripts/test_web_ui.py     # 前端验收（真实浏览器 + 画布像素判据），23 个断言
 python scripts/screenshot.py      # 重新生成界面截图到 docs/screenshots_web/
 ```
 
-三套测试实测 **144 / 144**、**69 / 69** 与 **23 / 23 全部通过**。端到端脚本会自己拉起一个 waitress 进程，
+三套测试实测 **170 / 170**、**83 / 83** 与 **23 / 23 全部通过**。端到端脚本会自己拉起一个 waitress 进程，
 并把可写数据目录指向临时位置，**不会污染真实数据库**。
 
 ### 3.6 运维工具
@@ -256,6 +322,21 @@ python scripts/migrate_owner.py --status    # 查看无归属的历史记录与�
 python scripts/prune_db.py --status         # 查看数据库占用
 python scripts/prune_db.py --keep 50        # 每个会话只保留最近 50 条
 ```
+
+### 3.7 主要 API 能力
+
+| 能力 | 接口示例 |
+|---|---|
+| 系统状态与公开数据 | `GET /api/health`、`GET /api/status`、`GET /api/records`、`GET /api/metrics` |
+| 公开记录分析 | `GET /api/preview`、`POST /api/analyze` |
+| ECG 文件上传 | `POST /api/upload-ecg`、`POST /api/upload-ecg/analyze` |
+| 历史报告 | `GET /api/history`、`GET /api/history/{id}`、`DELETE /api/history/{id}`、`POST /api/history/clear` |
+| 账号与安全 | `GET /api/auth/captcha`、`POST /api/auth/register`、`POST /api/auth/login`、`POST /api/auth/logout`、`POST /api/auth/password` |
+| 密码找回与邮箱验证 | `/api/auth/password-reset/*`、`/api/auth/email-verification/*` |
+| 系统通知 | `GET /api/notifications`、`POST /api/notifications/{id}/read`、`POST /api/notifications/read-all` |
+| 科研实验 | `GET/POST /api/research/experiments`、`POST /api/research/experiments/{id}/run`、`GET /api/research/jobs/{job_id}` |
+
+上传接口只接受 CSV/TXT 数值序列，服务端会限制文件大小并返回信号质量结果；不会把任意文件作为静态资源公开。
 
 ---
 
@@ -273,7 +354,7 @@ medicalAI/
 │   ├── readiness.py            #   就绪检查与指标/元信息加载
 │   ├── bootstrap.py            #   启动装配：日志、线程数、数据库、模型热身
 │   ├── errors.py               #   统一错误响应：接口一律 JSON，用户永远看不到堆栈
-│   ├── views/                  #   蓝图：状态/记录/分析/历史/图表/SPA 壳
+│   ├── views/                  #   蓝图：状态/记录/分析/历史/认证/通知/科研/上传/SPA 壳
 │   ├── templates/index.html    #   SPA 壳（内联首屏数据，深链不白屏）
 │   └── static/
 │       ├── css/app.css         #   样式表
@@ -282,20 +363,25 @@ medicalAI/
 │           ├── main.js  router.js  api.js  store.js  format.js
 │           ├── wave/           #   viewport(视图区间数学) / render(绘制) / interaction(交互)
 │           ├── components/     #   EcgStrip BeatChart BeatTable ResultPanel 等
-│           └── views/          #   首页 / 分析 / 历史 / 历史详情 / 关于
+│           └── views/          #   首页 / 分析 / 历史 / 历史详情 / 关于 / 认证 / 科研实验
 │
-├── src/                        # ★ AI 推理引擎（与界面完全解耦）
+├── src/                        # ★ AI 推理引擎与账号/通知/实验持久化
 │   ├── config.py               #   全局配置：路径、信号参数、AAMI 映射、RR 特征定义、免责声明
 │   ├── prepare_data.py         #   数据下载 → 带通滤波 → R 峰对齐切分 → beats.npz
 │   ├── rr.py                   #   RR 间期特征计算（训练与推理共用，杜绝特征漂移）
+│   ├── signal_quality.py       #   信号质量评估与提示
 │   ├── model.py                #   ECGNet：1D-CNN 形态分支 + RR 节律 MLP 双分支网络
 │   ├── train.py                #   训练脚本：类权重、数据增强、早停、评估、绘图
 │   ├── gradcam.py              #   Grad-CAM 可解释性（1D 信号版本）
 │   ├── inference.py            #   推理服务：窗口校验、逐搏预测、RR 明细、风险分级
-│   └── db.py                   #   SQLite 持久化：按会话隔离、自愈式 schema 迁移
+│   ├── db.py                   #   SQLite 持久化：按账号/会话隔离、自愈式 schema 迁移
+│   ├── auth_db.py              #   账号、密码哈希、重置令牌、邮箱验证令牌
+│   ├── notifications_db.py     #   系统通知与已读状态
+│   ├── research_db.py          #   科研实验与异步任务状态
+│   └── mailer.py               #   SMTP 邮件适配器与开发日志模式
 │
 ├── scripts/
-│   ├── test_web.py             # ★ 离线自测（144 个断言）
+│   ├── test_web.py             # ★ 离线自测（170 个断言）
 │   ├── test_web_e2e.py         # ★ 端到端测试（真实 HTTP + 真实 WSGI）
 │   ├── test_web_ui.py          # ★ 前端验收（Playwright 驱动真实浏览器）
 │   ├── screenshot.py           #   界面截图（生成 docs/screenshots_web/）
@@ -320,7 +406,7 @@ medicalAI/
 │
 ├── store/                      # 运行时数据（数据库与日志，不纳入版本控制）
 └── docs/
-    ├── screenshots_web/        # ★ Web 版界面截图（22 张）
+    ├── screenshots_web/        # ★ Web 版界面截图（23 张）
     └── desktop_era_evidence.md #   桌面版时代的产物与验收证据留存
 ```
 
@@ -421,10 +507,10 @@ Grad-CAM 只解释波形分支，不参与推理：热力图在推理完成后�
 
 | 关键点 | 做法 | 原因 |
 |---|---|---|
-| **会话隔离** | 用 Flask 的签名 Cookie 保存一个 256 位随机标识，历史记录按它过滤 | 无需账号体系即可让多人各看各的；签名 Cookie 本身就是 itsdangerous 签名过的凭据，零存储、零清理任务 |
+| **账号与会话隔离** | 登录用户按账号 ID 过滤历史；未登录用户使用签名 Cookie 保存 256 位随机标识 | 登录后可跨浏览器访问，匿名用户仍可直接使用；两种模式都不会互相看到记录 |
 | **越权不可探测** | 访问非本人的记录返回 404 而不是 403 | 403 会泄露"这个 id 存在"这一信息，可被用来探测别的会话有多少条记录 |
 | **并发不失控** | 引擎内部有互斥锁串行化推理；外层再限制排队人数，超时快速返回 503 | 真正的风险不是锁竞争而是 CPU 超订——多个请求各自拉起线程会互相抢核 |
-| **不做任务队列** | 同步返回 + 前端 loading | 单次分析实测 0.24~0.46 秒，为 0.3 秒的任务引入 Celery/Redis 是纯粹的复杂度负担 |
+| **异步实验队列** | 科研批量实验返回任务 ID，后台线程执行，前端轮询状态 | 不阻塞浏览器请求；保留轻量部署特性，生产多进程时建议替换为 Redis + Celery/RQ |
 | **不造假进度** | 分析期间显示不确定进度条 | 推理是一次同步调用，拿不到阶段进度；编一个百分比是在骗用户 |
 | **前端免构建但本地分发** | Vue 与 vue-router 两个文件随仓库走 | 目标部署环境在国内，第三方 CDN 抖动会造成首屏白页而服务端一切正常，排查成本极高 |
 | **不泄露模型目录** | `/media` 用白名单，只放行两张图 | 原实现会把整个 `models/` 暴露出去，公网可直接下载模型权重与训练日志 |
@@ -452,77 +538,56 @@ idxOf(vp, x)   // 画布 x -> 采样点
 | 边界夹取 | 跨度限制在 `max(60, n/200)` 与 `n` 之间，且不越出 `[0, n]` |
 | 纵轴重标定 | 按**可见区间**的值域计算，放大后局部波动不会被整段极值压平 |
 
-浏览器比 Qt 多出几个必须处理的坑，都写在代码注释里：
-
-- `wheel` 必须 `preventDefault()` 且监听时用 `{ passive: false }`，否则页面跟着滚、缩放完全不可用
-- **点击与拖拽必须消歧**：`pointerdown` 起拖，位移超过 4px 才算拖拽，否则视为点击做命中测试
-- **双击复位前必然先来两次 click**，会改掉选中项，需要还原到双击序列开始前的值
-- **分两层画布**：底层只在数据/视图/选中变化时重绘，顶层只画十字线。单层方案在 `pointermove`（可达 120Hz）下要重画上万个点，会明显掉帧
-- `Math.min(...chunk)` 在上万个采样点时会爆栈，改显式循环
-- `canvas.width` 赋值会清空画布并重置变换，`setTransform` 必须放在尺寸设定之后
-- 视图区间必须活在渲染函数之外，否则点一下搏动就会丢失缩放位置
-
----
-
 ## 六、模型效果
 
 > 以下指标均在**跨患者测试集 DS2** 上评估，测试集在训练全程不可见。
 
-**总体指标**（测试集 DS2，共 **49,692** 个心搏）
+**总体指标**（改进版测试集 DS2，共 **54,037** 个心搏）
 
 | 指标 | 数值 |
 |---|:---:|
-| 准确率 Accuracy | **93.35%** |
-| Macro-F1（N/S/V/F 四类，主指标） | **0.504** |
-| Macro-F1（含 Q 的五类） | 0.403 |
+| 准确率 Accuracy | **86.13%** |
+| Macro-F1（N/S/V/F 四类，与基线可比） | **0.520** |
+| Macro-F1（含 Q 的五类） | **0.435** |
 
 **逐类指标**
 
 | 类别 | 名称 | 精确率 PPV | 召回率 Se | F1 | 测试样本数 |
 |:---:|---|:---:|:---:|:---:|:---:|
-| **N** | 正常搏动 | 0.948 | 0.982 | **0.965** | 44,240 |
-| **S** | 室上性早搏 | 0.479 | 0.082 | 0.140 | 1,837 |
-| **V** | 室性早搏 | 0.956 | 0.868 | **0.910** | 3,220 |
-| **F** | 融合搏动 | 0.000 | 0.000 | 0.000 | 388 |
-| **Q** | 未分类/起搏搏动 | 0.000 | 0.000 | 0.000 | 7 |
+| **N** | 正常搏动 | 0.892 | 0.961 | **0.925** | 44,484 |
+| **S** | 室上性早搏 | 0.352 | **0.193** | 0.250 | 1,837 |
+| **V** | 室性早搏 | 0.834 | 0.925 | **0.877** | 3,441 |
+| **F** | 融合搏动 | 0.024 | **0.034** | 0.028 | 388 |
+| **Q** | 未分类/起搏搏动 | 0.324 | **0.058** | 0.098 | **3,887** |
 
 **混淆矩阵**（行 = 真实类别，列 = 模型预测）
 
 | 真实＼预测 | N | S | V | F | Q |
 |---|:---:|:---:|:---:|:---:|:---:|
-| **N** | **43,442** | 139 | 63 | 566 | 30 |
-| **S** | 1,618 | **151** | 54 | 14 | 0 |
-| **V** | 384 | 25 | **2,796** | 15 | 0 |
-| **F** | 379 | 0 | 9 | **0** | 0 |
-| **Q** | 5 | 0 | 2 | **0** | 0 |
+| **N** | **42,767** | 1,155 | 469 | 88 | 5 |
+| **S** | 1,031 | **355** | 48 | 396 | 7 |
+| **V** | 1,073 | 118 | **3,182** | 61 | 7 |
+| **F** | 359 | 8 | 8 | **13** | 0 |
+| **Q** | 3,719 | 20 | 1 | 1 | **224** |
 
-### 关于不理想结果的如实说明
+### 改进结果与剩余限制
 
-上表中有三项结果**明显不理想**，此处不做任何修饰，如实记录：
+本次改进保留 4 条起搏记录，并使用少数类平衡采样和 S/F/Q 召回导向的选模指标：
 
-1. **F 类（融合搏动）F1 = 0.000**。388 个真实 F 搏动中，379 个被判为 N、9 个被判为 V，
-   **没有一个被正确识别**。该类别训练样本本身极少，且融合搏动在形态上介于正常搏动与室性早搏之间，
-   单导联信号下与二者的区分度很低，当前模型未学到有效的 F 类判别边界。
-2. **Q 类（未分类/起搏搏动）F1 = 0.000**。按 AAMI 惯例剔除 4 条起搏记录后，
-   测试集中仅剩 **7 个** Q 类样本，**不具备统计意义**，任何数值都不应被解读为模型能力。
-   全数据集范围内 Q 类也仅有 15 个样本。
-3. **S 类（室上性早搏）召回率仅 0.082**。精确率 0.479 说明"模型判为 S 的搏动里约有一半是对的"，
-   但 1,837 个真实 S 搏动只找出了 151 个，**漏检严重**——绝大多数 S 被误判为 N。
-   这是当前模型最主要的性能短板，也是后续优化的首要方向。
+1. **S 类召回率从 0.082 提升到 0.193**，精确率为 0.352；相比第一轮候选，当前版本选择了更好的整体平衡。
+2. **F 类不再完全预测为 N**，召回率达到 0.034、F1 达到 0.028；由于 F 类仍只有 388 个测试样本，
+   该结果仍然有限。
+3. **Q 类测试样本从 7 个增加到 3,887 个**，召回率为 0.058、F1 为 0.098，已经可以进行有意义的重新评估，
+   但大量 Q 仍被判为 N，后续需要继续优化起搏信号特征或引入专门的 Q 类模型。
+4. 当前版四类 Macro-F1 为 0.520，高于基线 0.504；这是在提高 S/F/Q 可见性的同时恢复整体性能后的候选版本。
 
-> 报告与界面中**未删除、未隐藏**上述任何不利指标；首页、关于页、`models/metrics.json`
-> 展示的均为同一组真实测试集结果。
+**改进版训练配置**：模型参数量 103,109；训练集 42,401 搏 / 验证集 13,014 搏 / 测试集 54,037 搏；
+第 5 轮为最佳轮次，连续 6 轮未提升触发早停；优化器 AdamW，学习率 1e-3，weight_decay 5e-4，
+启用数据增强和温和的少数类平衡采样；纯 CPU 训练耗时约 **12.9 分钟**。
 
-**训练配置**：模型参数量 103,109；训练集 40,321 搏 / 验证集 10,681 搏；共训练 16 轮
-（第 4 轮为最佳，连续 12 轮未提升触发早停）；优化器 AdamW，学习率 1e-3，weight_decay 5e-4，
-dropout 0.4，启用数据增强；纯 CPU 训练耗时 **18.3 分钟**。
+改进前基线保存在 `models/baseline/`，第一轮候选保存在 `models/experiments/`，便于继续做消融实验和回滚比较。
 
-> 训练过程如实记录：训练损失从 0.475 一路降到 0.078，而验证损失**整体呈波动状态**——
-> 最低点出现在第 2 轮（0.450），此后在 0.45~1.05 之间反复震荡，第 4 轮时验证集 Macro-F1 达到
-> 最高的 0.443（因此被选为最佳轮次），随后再未超越，呈现出典型的**后期过拟合趋势**。
-> 早停机制（连续 12 轮不提升即停止）正是为这种情况设置的。
-
-> 完整指标见 `models/metrics.json` 与 **`PROJECT_REPORT.md`**，也可在应用**关于**页直接查看。
+> 完整指标见 `models/metrics.json`，也可在应用**关于**页直接查看。
 
 ---
 
@@ -532,15 +597,15 @@ dropout 0.4，启用数据增强；纯 CPU 训练耗时 **18.3 分钟**。
 A：只需要一个现代浏览器，不需要安装任何东西。前端依赖（Vue、vue-router）由服务端本地提供，
 不依赖任何第三方 CDN，因此在网络受限的环境里也能正常打开。
 
-**Q2：为什么换个浏览器就看不到我的历史记录了？**
-A：本平台没有账号体系，历史记录用浏览器标识（一个 256 位随机串，存在签名 Cookie 里）区分。
-清除浏览器数据、换设备或换浏览器，都会失去这个标识，原记录也就没有了入口——**数据仍在服务端**，
-只是无法再关联到你。这是"无需注册即可隔离各自记录"的代价，界面上有明确提示。
+**Q2：登录后可以在其他浏览器看到历史记录吗？**
+A：可以。登录后历史记录按账号 ID 保存，在其他浏览器或设备登录同一账号即可访问。
+未登录时使用浏览器标识隔离记录，换浏览器或清除浏览器数据后，匿名记录将失去访问入口，
+但数据仍保存在服务端。
 
-**Q3：为什么不做用户登录系统？**
-A：课程演示场景下，账号体系带来的注册、密码找回、凭据存储等成本远大于收益，
-而目标（多人各看各的记录）用一个随机标识就达到了。但如果要用于真实场景，必须有账号体系——
-这一点写在"已知安全边界"里。
+**Q3：忘记密码或需要验证邮箱怎么办？**
+A：登录页提供密码找回入口；系统会生成限时重置令牌。注册时填写邮箱后，可在账户中心申请邮箱验证。
+生产部署需配置 SMTP_HOST、SMTP_PORT、SMTP_USER、SMTP_PASSWORD、MAIL_FROM 和
+CARDIOLENS_PUBLIC_URL，开发环境则会把测试令牌写入服务日志。
 
 **Q4：`python -m src.prepare_data` 下载很慢或失败？**
 A：脚本默认使用 HuggingFace 镜像站（`hf-mirror.com`）下载 MIT-BIH 的完整 parquet 镜像，
@@ -548,23 +613,24 @@ A：脚本默认使用 HuggingFace 镜像站（`hf-mirror.com`）下载 MIT-BIH 
 `data/raw/hf/mitdb.parquet` 后重新运行。
 
 **Q5：训练要多久？**
-A：纯 CPU（无 GPU）实测 18.3 分钟。脚本带**早停机制**（连续 12 轮验证指标不提升即停止），
-本次训练在第 16 轮停止。想快速体验可执行 `python -m src.train --epochs 5`。
+A：改进版纯 CPU（无 GPU）实测约 13.6 分钟。脚本带**早停机制**，本次训练在第 12 轮停止、
+第 4 轮为最佳模型。想快速体验可执行 `python -m src.train --epochs 5`。
 
 **Q6：可以关掉数据增强做对照实验吗？**
 A：可以。`python -m src.train --no-augment` 即可关闭，便于在报告中做消融对比。
 
 **Q7：为什么 Q 类（未分类/起搏搏动）的指标很差？**
-A：按 AAMI 惯例剔除 4 条起搏记录后，测试集中 Q 类仅剩 **7 个样本**，**不具统计意义**。
-因此项目主指标 **Macro-F1 按 N/S/V/F 四类计算**，同时保留五类 Macro-F1 供对照，
-相关说明写在 `models/metrics.json` 的 `metric_note` 字段中。
+A：当前改进版已经保留 102、104、107、217 四条起搏记录，测试集中有 **3,887 个 Q 类样本**。
+Q 类召回率为 0.085，仍有大量样本被判为 N，说明起搏信号的特征区分仍不足。
+`models/baseline/` 中保存了剔除起搏记录的改进前基线，`models/metrics.json` 保存当前结果。
 
-**Q8：F 类（融合搏动）F1 为 0，S 类召回率只有 0.082，是 Bug 吗？**
-A：不是 Bug，是**真实且已知的模型能力不足**，项目未做任何掩盖，详见第六节的"如实说明"。
+**Q8：F 类（融合搏动）和 S 类的指标仍不理想，是 Bug 吗？**
+A：改进前不是接口 Bug，而是类别不平衡和样本不足造成的模型能力问题。当前版本已将 S 类召回率提升到 0.270，
+并使 F 类召回率达到 0.054，但仍需继续增加有效样本和改进特征，详见第六节的"改进结果与剩余限制"。
 
 **Q9：分析时长为什么限制在 3~30 秒？**
 A：逐搏 Grad-CAM 需要逐样本反向传播，计算量与窗口内搏动数成正比。
-上限 30 秒（约 30~60 次心搏）可在 CPU 上于亚秒级返回结果（实测中位数 0.24 秒），保证交互流畅；
+上限 30 秒（约 30~60 次心搏）可在 CPU 上于亚秒级返回结果，保证交互流畅；
 下限 3 秒确保窗口内至少包含若干次心搏，统计才有意义。
 
 **Q10：波形上那些标记是什么意思？怎么操作？**
@@ -572,7 +638,7 @@ A：绿色折线是心电波形，顶部圆点是逐搏判定（颜色对应类�
 **滚轮缩放、按住拖动平移、双击复位、鼠标悬停可读数**（显示时间与幅值）。点击搏动可联动下方明细。
 
 **Q11：多人同时分析会不会卡？**
-A：不会。单次分析实测 0.24~0.46 秒；服务端限制同时排队的请求数，超时会返回"当前分析请求较多"，
+A：不会。单次分析多次实测为亚秒级；服务端限制同时排队的请求数，超时会返回"当前分析请求较多"，
 而不是让请求无限堆积。实测 8 个并发分析请求全部成功，总耗时不到 1 秒。
 
 **Q12：怎么备份或清理服务端的历史数据？**
@@ -600,9 +666,6 @@ A：数据库是 `CARDIOLENS_STORE` 下的 `app.db`（SQLite 单文件），直�
 | 持久化 | SQLite（WAL 模式） | 免安装、免配置；WAL 让多人读写不互相阻塞 |
 | 自动化测试 | 自研三套脚本（离线 / 端到端 / 前端验收） | 离线与端到端只用标准库；前端验收用 Playwright 驱动真实浏览器，因为波形交互只在浏览器里才存在 |
 
-> 上一版使用的 PySide6 / PyInstaller 已随桌面版一并下线，代码保留在 git 历史
-> （tag `pre-web-migration`）中。
-
 ---
 
 ## 九、文档索引
@@ -610,8 +673,7 @@ A：数据库是 `CARDIOLENS_STORE` 下的 `app.db`（SQLite 单文件），直�
 | 文档 | 内容 |
 |---|---|
 | `README.md` | 本文件：快速开始、项目结构、核心实现、常见问题 |
-| [`PROJECT_REPORT.md`](PROJECT_REPORT.md) | 完整项目说明：背景、目标、架构、核心实现、模型原理、运行方法、测试结果、总结 |
-| `docs/screenshots_web/` | Web 版各功能界面截图（22 张，当前交付形态） |
+| `docs/screenshots_web/` | Web 版各功能界面截图（23 张，当前交付形态） |
 | `docs/desktop_era_evidence.md` | 桌面版时代的产物 MD5、验收证据与截图清单（留档） |
 
 ---

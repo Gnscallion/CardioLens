@@ -92,8 +92,13 @@ def register_error_handlers(app) -> None:
 
     @app.errorhandler(413)
     def _too_large(_exc):
-        limit_kb = app.config.get("MAX_CONTENT_LENGTH", 0) // 1024
-        return _error(f"请求体过大（上限 {limit_kb} KB）", 413)
+        limit = (app.config.get("UPLOAD_MAX_CONTENT_LENGTH", 0)
+                 if request.path in {"/api/upload-ecg", "/api/upload-ecg/analyze"}
+                 else app.config.get("MAX_CONTENT_LENGTH", 0))
+        limit_kb = limit // 1024
+        suffix = " MB" if limit_kb >= 1024 else " KB"
+        display = limit_kb // 1024 if limit_kb >= 1024 else limit_kb
+        return _error(f"请求体过大（上限 {display}{suffix}）", 413)
 
     @app.errorhandler(Exception)
     def _unhandled(exc: Exception):

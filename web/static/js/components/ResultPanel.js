@@ -46,6 +46,18 @@ export default {
       selected.value >= 0 ? beats.value[selected.value] || null : null
     );
 
+    const insights = computed(() => {
+      const s = summary.value || {};
+      const list = beats.value;
+      const low = list.filter(b => Math.max(...Object.values(b.probs || {}).map(Number)) < 0.65).length;
+      const abnormal = list.filter(b => b.pred && b.pred !== 'N');
+      const rr = list.map(b => Number(b.rr_prev_sec)).filter(v => Number.isFinite(v) && v > 0);
+      const meanRr = rr.length ? rr.reduce((a, b) => a + b, 0) / rr.length : 0;
+      const shortest = rr.length ? Math.min(...rr) : 0;
+      const riskText = s.abnormal_count ? `本窗口检测到 ${s.abnormal_count} 个非 N 类搏动，建议重点查看波形标记位置。` : '本窗口未检测到非 N 类搏动，仍请结合原始波形与专家意见理解结果。';
+      return { low, abnormal: abnormal.length, meanRr, shortest, riskText };
+    });
+
     const windowText = computed(() => {
       const r = props.result;
       return `记录 ${r.record_id} · ${num(r.start_sec, 1)}s 起 ${num(r.duration_sec, 0)} 秒`;
@@ -82,9 +94,30 @@ export default {
       if (strip.value && selected.value >= 0) strip.value.zoomToBeat(selected.value);
     }
 
+    function downloadReport() {
+      const r = props.result, s = summary.value;
+      const text = [`CardioLens ECG 科研分析报告`, `记录：${r.record_id}`, `窗口：${r.start_sec}s / ${r.duration_sec}s`, `心搏数：${s.n_beats}`, `异常搏动：${s.abnormal_count}（${pct(s.abnormal_ratio)}）`, `平均置信度：${pct(s.mean_confidence)}`, `ECE：${s.ece ?? '无专家标注'}`, `Brier Score：${s.brier_score ?? '无专家标注'}`, `高置信度错误：${s.high_confidence_errors ?? '无专家标注'}`, `风险摘要：${insights.value.riskText}`, `模型不确定搏动：${insights.value.low}`, '', '声明：本报告仅用于科研与辅助分析，不构成医疗诊断。'].join('\n');
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], {type:'text/plain;charset=utf-8'})); a.download = `ECG_report_${r.record_id}.txt`; a.click(); URL.revokeObjectURL(a.href);
+    }
+    function downloadData(format) {
+      const r = props.result;
+      let content, type, extension;
+      if (format === 'json') {
+        content = JSON.stringify(r, null, 2); type = 'application/json;charset=utf-8'; extension = 'json';
+      } else {
+        const fields = ['index', 'time_sec', 'pred', 'pred_name', 'confidence', 'expert', 'agree'];
+        const rows = [fields.join(','), ...beats.value.map((b) => fields.map((f) => JSON.stringify(b[f] ?? '')).join(','))];
+        content = rows.join('\n'); type = 'text/csv;charset=utf-8'; extension = 'csv';
+      }
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([content], { type }));
+      a.download = `ECG_${r.record_id}.${extension}`; a.click(); URL.revokeObjectURL(a.href);
+    }
+
     return {
-      selected, strip, beats, summary, currentBeat, windowText, splitNote,
-      onSelect, focusBeat,
+      selected, strip, beats, summary, currentBeat, insights, windowText, splitNote,
+      onSelect, focusBeat, downloadReport,
+      downloadData,
       pct, num, riskClass,
     };
   },
@@ -105,7 +138,10 @@ export default {
             <button v-if="fromHistory" class="btn btn-ghost btn-sm" @click="$emit('back')">
               ← 返回历史
             </button>
-            <button v-else class="btn btn-primary btn-sm"
+            <button v-if="!fromHistory" class="btn btn-ghost btn-sm" @click="downloadReport">导出科研报告</button>
+            <button class="btn btn-ghost btn-sm" @click="downloadData('json')">JSON</button>
+            <button class="btn btn-ghost btn-sm" @click="downloadData('csv')">CSV</button>
+            <button v-if="!fromHistory" class="btn btn-primary btn-sm"
                     data-test="save-btn"
                     :disabled="saving || saved"
                     @click="$emit('save')">
@@ -131,6 +167,22 @@ export default {
           <div class="stat" :class="summary.abnormal_ratio >= 0.3 ? 'danger' : (summary.abnormal_ratio > 0 ? 'warn' : 'ok')">
             <div class="k">异常搏动占比</div><div class="v">{{ pct(summary.abnormal_ratio) }}</div>
           </div>
+        </div>
+
+        <div class="grid grid-2 mt16">
+          <div class="alert alert-info mb0">
+            <span class="ic">🧭</span>
+            <span><strong>智能摘要</strong><br>{{ insights.riskText }}<span v-if="insights.low">其中 {{ insights.low }} 个搏动的最高类别概率低于 65%，已标记为“模型不确定”。</span></span>
+          </div>
+          <div class="alert alert-mute mb0">
+            <span class="ic">📈</span>
+            <span><strong>节律统计</strong><br>有效 RR 间期 {{ beats.length ? beats.length : 0 }} 个<span v-if="insights.meanRr">，平均 {{ insights.meanRr.toFixed(3) }}s，最短 {{ insights.shortest.toFixed(3) }}s</span>。可点击下方搏动定位异常片段。</span>
+          </div>
+        </div>
+        <div class="grid grid-3 mt16" v-if="summary.ece != null">
+          <div class="stat"><div class="k">ECE 校准误差</div><div class="v">{{ summary.ece.toFixed(4) }}</div></div>
+          <div class="stat"><div class="k">Brier Score</div><div class="v">{{ summary.brier_score.toFixed(4) }}</div></div>
+          <div class="stat" :class="summary.high_confidence_errors ? 'warn' : 'ok'"><div class="k">高置信度错误</div><div class="v">{{ summary.high_confidence_errors }}</div></div>
         </div>
 
         <div class="grid grid-2 mt16">

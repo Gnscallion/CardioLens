@@ -15,6 +15,8 @@ export default {
     const startSec = ref(0);
     const durationSec = ref(10);
     const withCam = ref(true);
+    const uploadQuality = ref(null);
+    const uploadError = ref('');
 
     const previewLoading = ref(false);
     const analysisError = ref('');
@@ -22,6 +24,13 @@ export default {
     const saved = ref(false);
 
     const records = computed(() => store.records || []);
+
+    // 公开数据集中的少量推荐记录，供首次使用者直接观察完整分析流程。
+    const publicSamples = computed(() => {
+      const preferred = records.value.filter((r) => r.recommended);
+      const rest = records.value.filter((r) => !r.recommended);
+      return [...preferred, ...rest].slice(0, 4);
+    });
 
     const currentRecord = computed(
       () => records.value.find((r) => r.id === recordId.value) || null
@@ -62,6 +71,11 @@ export default {
       }
     }
 
+    function choosePublicSample(id) {
+      selectRecord(id);
+      doPreview();
+    }
+
     function clampStart() {
       if (startSec.value > maxStart.value) startSec.value = maxStart.value;
       if (startSec.value < 0) startSec.value = 0;
@@ -79,6 +93,23 @@ export default {
       } finally {
         previewLoading.value = false;
       }
+    }
+
+    async function uploadEcg(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      uploadError.value = ''; uploadQuality.value = null;
+      const body = new FormData(); body.append('file', file);
+      try {
+        const res = await fetch('/api/upload-ecg/analyze', { method: 'POST', body });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.error || '上传失败');
+        uploadQuality.value = data.quality;
+        store.result = data;
+        store.resultFromHistory = false;
+        store.savedId = null;
+        store.selectedBeat = data.beats?.length ? 0 : -1;
+      } catch (err) { uploadError.value = err.message; }
     }
 
     async function doAnalyze() {
@@ -141,15 +172,40 @@ export default {
     });
 
     return {
-      store, recordId, startSec, durationSec, withCam, records, currentRecord,
+      store, recordId, startSec, durationSec, withCam, records, publicSamples, currentRecord,
       maxStart, totalSec, previewLoading, analysisError, saving, saved,
-      ready, previewStart, previewBeats,
-      selectRecord, doPreview, doAnalyze, doSave,
+      ready, previewStart, previewBeats, uploadQuality, uploadError,
+      selectRecord, choosePublicSample, doPreview, doAnalyze, doSave, uploadEcg,
     };
   },
 
   template: `
     <div>
+      <div class="card">
+        <div class="card-head"><div><h2>导入 ECG 文件</h2><p class="card-sub mb0">支持 CSV / TXT 数值序列，当前用于信号质量预检，不会自动替代公开数据集模型评估。</p></div></div>
+        <input type="file" accept=".csv,.txt,text/csv,text/plain" @change="uploadEcg">
+        <div class="alert alert-err mt16" v-if="uploadError"><span class="ic">⚠️</span>{{ uploadError }}</div>
+        <div class="alert mt16" :class="uploadQuality && uploadQuality.quality === 'good' ? 'alert-ok' : 'alert-warn'" v-if="uploadQuality">
+          <span class="ic">{{ uploadQuality.quality === 'good' ? '✓' : '⚠️' }}</span>
+          <span><strong>{{ uploadQuality.quality_label }}</strong> · {{ uploadQuality.duration_sec }} 秒 · {{ uploadQuality.n_samples }} 点<br><span v-if="uploadQuality.flags.length">问题：{{ uploadQuality.flags.join('、') }}</span><span v-else>未发现明显振幅或噪声异常，可进入后续预处理。</span></span>
+        </div>
+        <div class="public-dataset" v-if="publicSamples.length" data-test="public-samples">
+          <div class="public-dataset-head">
+            <div><strong>或直接体验公开数据集</strong><span>MIT-BIH Arrhythmia Database</span></div>
+            <small>选择样例即可预览</small>
+          </div>
+          <div class="sample-grid">
+            <button v-for="r in publicSamples" :key="r.id" type="button"
+                    class="sample-card" :class="{ on: r.id === recordId }"
+                    @click="choosePublicSample(r.id)">
+              <span class="sample-top"><b>{{ r.recommended ? '推荐样例' : '公开记录' }}</b><i>{{ r.split || 'MIT-BIH' }}</i></span>
+              <strong>记录 {{ r.id }}</strong>
+              <span>{{ r.duration_sec ? Math.round(r.duration_sec) : '—' }} 秒 · {{ r.n_beats || '—' }} 搏</span>
+              <em>{{ r.id === recordId ? '已选择 · 正在预览' : '点击选择' }}</em>
+            </button>
+          </div>
+        </div>
+      </div>
       <div class="alert alert-err" v-if="!ready" data-test="not-ready">
         <span class="ic">⚠️</span>
         <span>

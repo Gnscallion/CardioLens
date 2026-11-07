@@ -58,6 +58,7 @@ class BaseConfig:
     # （注意 Flask 的 MAX_CONTENT_LENGTH 只限请求体，不限响应体——
     #   30 秒窗口的响应有约 0.16 MB，不受此限制影响。）
     MAX_CONTENT_LENGTH = 64 * 1024
+    UPLOAD_MAX_CONTENT_LENGTH = 5 * 1024 * 1024
 
     # ---------------------------------------------------------- 并发
     # 推理引擎内部已有互斥锁在串行化前向与 Grad-CAM，这里限制的是
@@ -83,6 +84,8 @@ class BaseConfig:
     # scripts/migrate_owner.py --adopt 认领遗留记录。
     # 生产环境默认关闭：它会经网络回显一份凭据，没必要长期暴露。
     ENABLE_WHOAMI = False
+    ENFORCE_CSRF = _env_int('CARDIOLENS_ENFORCE_CSRF', 0) == 1
+    TRUST_PROXY = _env_int('CARDIOLENS_TRUST_PROXY', 1)
 
 
 class DevConfig(BaseConfig):
@@ -112,6 +115,7 @@ class ProdConfig(BaseConfig):
     APP_ENV = "production"
     DEBUG = False
     SESSION_COOKIE_SECURE = True    # 仅通过 HTTPS 发送；由 nginx 终止 TLS
+    ENFORCE_CSRF = True
 
     # 取值可能为 None，由 load_config() 负责校验。
     #

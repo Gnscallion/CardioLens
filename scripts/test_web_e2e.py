@@ -296,41 +296,105 @@ def test_history(s: Session) -> None:
 
 # ================================================================ E 会话隔离
 def test_isolation() -> None:
-    print("\n[E] 会话隔离（两个独立 CookieJar）")
+    """跨会话隔离（真实 HTTP + 两个独立 CookieJar）。
+
+    与离线套件的同名测试互补：这里走的是**真实的 Cookie 往返**——
+    Cookie 由服务端 Set-Cookie 下发、由客户端 CookieJar 保存并回传，
+    而离线套件的 test_client 可以绕过这一层。会话隔离本质上是"凭据如何
+    绑定请求"的问题，因此真实往返是必要的验证。
+
+    测试设计上的三点要求：
+      1. 必须有**正向对照**（A 能读自己的、B 也能读自己的），否则 404
+         无法排除"端点本身坏了"这一解释；
+      2. 必须断言**响应体内容**，而不只是状态码；
+      3. **不能把 405 当作隔离证据**——`/api/history/<id>` 只注册了
+         GET 与 DELETE，用 POST 请求得到 405 只说明方法不存在。
+         跨会话请求一律使用**路由实际允许的方法**。
+    """
+    print("\n[E] 会话隔离（两个独立 CookieJar，逐一覆盖历史端点）")
     a, b = Session(), Session()
 
     a.get("/api/status")
     b.get("/api/status")
     check("两个会话的 Cookie 不同",
           a.cookie_value("cardiolens_sid") != b.cookie_value("cardiolens_sid"))
+    check("两次会话的 Cookie 都不为空",
+          bool(a.cookie_value("cardiolens_sid")) and bool(b.cookie_value("cardiolens_sid")))
 
-    ids = []
-    for i in range(2):
-        _, body = a.post("/api/analyze", {
-            "record_id": RECORD, "start_sec": START_SEC + i,
-            "duration_sec": DURATION_SEC, "save": True, "title": f"A 的报告 {i}",
-        })
-        ids.append(body.get("saved_id"))
+    secret_title = "A-SECRET-e2e-51c4"
+    _, body = a.post("/api/analyze", {
+        "record_id": RECORD, "start_sec": START_SEC, "duration_sec": DURATION_SEC,
+        "save": True, "title": secret_title,
+    })
+    a_id = body.get("saved_id")
+    _, body = b.post("/api/analyze", {
+        "record_id": RECORD, "start_sec": START_SEC + 2,
+        "duration_sec": DURATION_SEC, "save": True, "title": "B 自己的报告",
+    })
+    b_id = body.get("saved_id")
+    check("A 与 B 各自保存成功且 id 不同",
+          isinstance(a_id, int) and isinstance(b_id, int) and a_id != b_id,
+          f"A={a_id} B={b_id}")
 
+    # ---------- 正向对照 ----------
+    status, body = a.get(f"/api/history/{a_id}")
+    check("正向对照：A 读自己的记录 → 200", status == 200, f"HTTP {status}")
+    check("正向对照：A 读到的是自己那条（标题一致）",
+          body.get("title") == secret_title)
+    check("正向对照：A 的详情含逐搏 payload", bool(body.get("payload", {}).get("beats")))
+
+    status, body = b.get(f"/api/history/{b_id}")
+    check("正向对照：B 读自己的记录 → 200（证明端点对 B 可用）",
+          status == 200, f"HTTP {status}")
+
+    # ---------- 列表端点 ----------
+    _, a_list = a.get("/api/history")
+    _, b_list = b.get("/api/history")
+    check("A 的列表只含自己那 1 条", len(a_list["items"]) == 1, f"{len(a_list['items'])} 条")
+    check("B 的列表只含自己那 1 条", len(b_list["items"]) == 1, f"{len(b_list['items'])} 条")
+    check("B 的列表不含 A 的记录 id",
+          a_id not in [i["id"] for i in b_list["items"]])
+    check("B 的列表不含 A 的标题",
+          secret_title not in json.dumps(b_list, ensure_ascii=False))
+
+    # ---------- 详情端点：GET（路由允许的方法）----------
+    status, body = b.get(f"/api/history/{a_id}")
+    check("B 读 A 的记录 → 404（而非 403，不泄露存在性）",
+          status == 404, f"HTTP {status}")
+    raw = json.dumps(body, ensure_ascii=False)
+    check("B 的 404 响应体不含 A 的标题", secret_title not in raw)
+    check("B 的 404 响应体不含逐搏数据或 payload",
+          "beats" not in raw and "payload" not in raw)
+
+    # ---------- 删除端点：DELETE ----------
+    status, body = b.delete(f"/api/history/{a_id}")
+    check("B 删 A 的记录 → 404", status == 404, f"HTTP {status}")
+    check("B 的删除响应体不含 A 的标题",
+          secret_title not in json.dumps(body, ensure_ascii=False))
+    status, body = a.get(f"/api/history/{a_id}")
+    check("B 删除后 A 的记录仍然存在且可读",
+          status == 200 and body.get("title") == secret_title, f"HTTP {status}")
+
+    # ---------- 清空端点：只影响自己 ----------
+    status, body = b.post("/api/history/clear", {})
+    check("B 清空只删掉自己那 1 条", body.get("deleted") == 1,
+          f"deleted={body.get('deleted')}")
+    _, b_list = b.get("/api/history")
+    check("B 清空后自己的列表为空", b_list["items"] == [])
+    status, body = a.get(f"/api/history/{a_id}")
+    check("B 清空后 A 的记录仍可读",
+          status == 200 and body.get("title") == secret_title, f"HTTP {status}")
+    _, a_list = a.get("/api/history")
+    check("B 清空后 A 的列表仍有 1 条", len(a_list["items"]) == 1)
+
+    # ---------- 明确排除"用错方法"这类假证据 ----------
+    status, _ = b.request("POST", f"/api/history/{a_id}", payload={})
+    check("405（方法不存在）不是隔离证据——此处仅记录事实",
+          status in (404, 405), f"HTTP {status}（不作为隔离结论的依据）")
+
+    # ---------- 凭据不外泄 ----------
     _, body = a.get("/api/history")
-    check("A 能看到自己的 2 份报告", len(body["items"]) == 2, f"{len(body['items'])} 条")
-    _, body = b.get("/api/history")
-    check("B 看不到 A 的报告", len(body["items"]) == 0, f"{len(body['items'])} 条")
-
-    status, _ = b.get(f"/api/history/{ids[0]}")
-    check("B 读 A 的报告返回 404", status == 404, f"HTTP {status}")
-    status, _ = b.delete(f"/api/history/{ids[0]}")
-    check("B 删 A 的报告返回 404", status == 404, f"HTTP {status}")
-    status, _ = a.get(f"/api/history/{ids[0]}")
-    check("A 的报告未被 B 删掉", status == 200, f"HTTP {status}")
-
-    _, body = b.post("/api/history/clear", {})
-    check("B 清空只影响自己", body.get("deleted") == 0, str(body.get("deleted")))
-    _, body = a.get("/api/history")
-    check("A 的记录未被影响", len(body["items"]) == 2, f"{len(body['items'])} 条")
-
-    _, body = a.get("/api/history")
-    raw = json.dumps(body)
+    raw = json.dumps(body, ensure_ascii=False)
     check("历史响应不含 owner 字段", "owner" not in raw)
     check("历史响应不含会话标识明文",
           a.cookie_value("cardiolens_sid")[:16] not in raw)

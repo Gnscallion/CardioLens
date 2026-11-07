@@ -24,7 +24,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, WeightedRandomSampler
 
 from . import config as C
 from .model import build_model
@@ -64,22 +64,38 @@ def load_split():
 
 # 「Q 类」在按 AAMI 惯例剔除起搏记录（102/104/107/217）后仅剩十余个样本，
 # 无论怎么加权都无法学到，反而会因权重过大破坏训练稳定性，故对其设权重上限。
-WEIGHT_CAP = 10.0
+WEIGHT_CAP = 6.0
+BALANCE_POWER = 0.25
 
 
 def compute_class_weights(y: np.ndarray) -> torch.Tensor:
     """类别权重，缓解正常搏动占绝大多数导致的类别不平衡。
 
-    采用「平方根逆频率」而非直接逆频率：直接逆频率会让 Q 类权重高达 1300+，
-    少数几个样本就能主导梯度；平方根后梯度比例更温和，再把上限截到
+    采用较温和的「四次根逆频率」而非直接逆频率：直接逆频率会让 Q 类权重过大，
+    少数几个样本就能主导梯度；降低幂次后梯度比例更温和，再把上限截到
     ``WEIGHT_CAP``，最后归一化到均值为 1（不改变整体学习率量级）。
     """
     counts = np.bincount(y, minlength=len(C.AAMI_CLASSES)).astype(np.float64)
     counts = np.maximum(counts, 1.0)
-    weights = np.sqrt(len(y) / (len(C.AAMI_CLASSES) * counts))
+    weights = (len(y) / (len(C.AAMI_CLASSES) * counts)) ** BALANCE_POWER
     weights = np.clip(weights, None, WEIGHT_CAP)
     weights = weights / weights.mean()
     return torch.tensor(weights, dtype=torch.float32)
+
+
+def build_balanced_sampler(y: np.ndarray) -> WeightedRandomSampler:
+    """为少数类提供更多训练机会，降低模型把 S/F/Q 全部判成 N 的倾向。
+
+    采样只作用于训练集，验证集和 DS2 测试集仍保持原始分布，避免评估结果被
+    人为重采样。Q 类样本很少，因此它会重复出现，但不会改变测试集样本数。
+    """
+    counts = np.bincount(y, minlength=len(C.AAMI_CLASSES)).astype(np.float64)
+    counts = np.maximum(counts, 1.0)
+    class_prob = counts ** (-BALANCE_POWER)
+    # 在降低整体平衡强度的同时，给 S/F/Q 保留适度额外训练机会。
+    class_prob *= np.array([1.0, 1.35, 1.0, 1.75, 1.10])
+    sample_weights = torch.as_tensor(class_prob[y], dtype=torch.double)
+    return WeightedRandomSampler(sample_weights, num_samples=len(y), replacement=True)
 
 
 def augment_batch(xb: torch.Tensor, shift_max: int = 12, noise_std: float = 0.08,
@@ -128,8 +144,7 @@ def evaluate(model, X, R, y, device, batch_size=512):
     p, r, f1, sup = precision_recall_fscore_support(
         y, pred, labels=list(range(len(C.AAMI_CLASSES))), zero_division=0
     )
-    # 主指标：Q 类样本过少（十余个）不具统计意义，Macro-F1 按 N/S/V/F 四类计算。
-    # 同时也保留五类 Macro-F1，便于对照。
+    # 保留四类 Macro-F1 作为与历史基线可比的主指标，同时输出含 Q 的五类 Macro-F1。
     main_idx = [i for i, c in enumerate(C.AAMI_CLASSES) if c != "Q"]
     return {
         "accuracy": acc,
@@ -207,7 +222,7 @@ def main(epochs: int = 45, batch_size: int = 256, lr: float = 1e-3,
 
     train_loader = DataLoader(
         TensorDataset(torch.from_numpy(Xtr), torch.from_numpy(Rtr), torch.from_numpy(ytr)),
-        batch_size=batch_size, shuffle=True, drop_last=False,
+        batch_size=batch_size, sampler=build_balanced_sampler(ytr), drop_last=False,
     )
 
     model = build_model().to(device)
@@ -219,7 +234,7 @@ def main(epochs: int = 45, batch_size: int = 256, lr: float = 1e-3,
     ))
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=5e-4)
-    print(f"[训练] 数据增强：{'开启' if use_augment else '关闭'}")
+    print(f"[训练] 数据增强：{'开启' if use_augment else '关闭'}；少数类平衡采样：开启")
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
         optimizer, mode="max", factor=0.5, patience=3
     )
@@ -264,8 +279,15 @@ def main(epochs: int = 45, batch_size: int = 256, lr: float = 1e-3,
         history["val_macro_f1"].append(val["macro_f1"])
 
         flag = ""
-        if val["macro_f1"] > best_f1:
-            best_f1, best_epoch, wait = val["macro_f1"], epoch, 0
+        # 仍以四类 Macro-F1 为主，但把 S/F/Q 召回纳入选模，避免模型只优化 N/V。
+        focus_score = (
+            val["macro_f1"]
+            + 0.15 * val["per_class"]["S"]["recall"]
+            + 0.10 * val["per_class"]["F"]["recall"]
+            + 0.05 * val["per_class"]["Q"]["recall"]
+        )
+        if focus_score > best_f1:
+            best_f1, best_epoch, wait = focus_score, epoch, 0
             best_state = {k: v.detach().cpu().clone() for k, v in model.state_dict().items()}
             flag = "  <- 最优"
         else:
@@ -273,7 +295,7 @@ def main(epochs: int = 45, batch_size: int = 256, lr: float = 1e-3,
 
         print(f"  Epoch {epoch:2d}/{epochs} | 训练损失 {train_loss:.4f} | "
               f"验证损失 {val_loss:.4f} | 验证准确率 {val['accuracy']:.4f} | "
-              f"验证 Macro-F1 {val['macro_f1']:.4f}{flag}")
+              f"验证 Macro-F1 {val['macro_f1']:.4f} | 关注分数 {focus_score:.4f}{flag}")
 
         if wait >= patience:
             print(f"[训练] 验证指标连续 {patience} 轮未提升，提前停止")
@@ -318,15 +340,17 @@ def main(epochs: int = 45, batch_size: int = 256, lr: float = 1e-3,
         "val_records": sorted(VAL_RECORDS),
         "class_weights": {c: float(weights[i]) for i, c in enumerate(C.AAMI_CLASSES)},
         "class_names": C.CLASS_NAMES_ZH,
-        "main_metric": "macro_f1",
+        "main_metric": "macro_f1_with_minority_recall_focus",
+        "selection_metric": "macro_f1 + 0.15*S_recall + 0.10*F_recall + 0.05*Q_recall",
+        "balanced_sampler": True,
         "use_augment": bool(use_augment),
         "dropout": 0.4,
         "weight_decay": 5e-4,
         "lr": lr,
         "metric_note": (
-            "Q 类（未分类/起搏搏动）在按 AAMI 惯例剔除 4 条起搏记录后，"
-            "测试集仅剩极少样本，不具统计意义，故主指标 Macro-F1 按 N/S/V/F 四类计算；"
-            "macro_f1_5class 为含 Q 的五类 Macro-F1，仅供对照。"
+            "本改进版保留 102、104、107、217 四条起搏记录，Q 类进入训练和测试。"
+            "macro_f1 按 N/S/V/F 四类计算以便与改进前基线比较；"
+            "由于 Q 类现已有较多测试样本，macro_f1_5class 也应作为正式参考指标。"
         ),
     }
     C.METRICS_PATH.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

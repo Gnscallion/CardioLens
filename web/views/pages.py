@@ -16,7 +16,8 @@ from __future__ import annotations
 import json
 import re
 
-from flask import Blueprint, render_template
+from flask import Blueprint, render_template, session
+import secrets
 
 page_bp = Blueprint("pages", __name__)
 
@@ -29,6 +30,8 @@ SPA_ROUTE_PATTERNS = (
     re.compile(r"^/history/?$"),
     re.compile(r"^/history/\d+/?$"),
     re.compile(r"^/about/?$"),
+    re.compile(r"^/research/?$"),
+    re.compile(r"^/auth/?$"),
 )
 
 
@@ -58,6 +61,7 @@ def render_shell(status: int = 200):
     """
     from .meta_api import build_bootstrap_payload
 
+    session.setdefault('_csrf_token', secrets.token_urlsafe(32))
     payload = build_bootstrap_payload()
     html = render_template(
         "index.html",
@@ -65,6 +69,7 @@ def render_shell(status: int = 200):
         # 数据全部来自项目自身的常量与模型指标（不含用户输入），
         # 且 _json_for_inline 会做转义，因此这里用 |safe 输出是安全的。
         boot_json=_json_for_inline(payload),
+        csrf_token=session['_csrf_token'],
     )
     return html, status
 

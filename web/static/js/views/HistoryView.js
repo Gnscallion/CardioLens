@@ -1,7 +1,7 @@
 /* 分析历史：列表、查看详情、单条删除、清空全部。
  * 数据范围限于当前浏览器（会话隔离），文案上要讲清楚这一点。 */
 import { computed, onMounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import SessionNotice from '../components/SessionNotice.js';
 import { StatCard } from '../components/common.js';
@@ -14,9 +14,16 @@ export default {
 
   setup() {
     const router = useRouter();
+    const route = useRoute();
     const busy = ref(false);
 
-    const items = computed(() => store.history || []);
+    const allItems = computed(() => store.history || []);
+    const items = computed(() => {
+      const all = allItems.value;
+      const q = String(route.query.q || '').trim().toLowerCase();
+      if (!q) return all;
+      return all.filter((item) => `${item.title || ''} ${item.record_id || ''}`.toLowerCase().includes(q));
+    });
     const stats = computed(() => store.historyStats || {});
 
     async function refresh() {
@@ -41,8 +48,8 @@ export default {
     }
 
     async function clearAll() {
-      if (!items.value.length) return;
-      const n = items.value.length;
+      if (!allItems.value.length) return;
+      const n = allItems.value.length;
       if (!window.confirm(`确定清空本浏览器的全部 ${n} 份报告？此操作不可撤销。`)) return;
       try {
         const data = await store.clearHistory();

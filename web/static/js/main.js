@@ -5,6 +5,19 @@ import App from './App.js';
 import { router } from './router.js';
 import { store } from './store.js';
 
+// 生产环境开启 CSRF 双重校验时，所有同源写请求自动带上服务端下发的令牌。
+const originalFetch = window.fetch.bind(window);
+window.fetch = (input, init = {}) => {
+  const url = typeof input === 'string' ? input : input.url;
+  const method = (init.method || (typeof input !== 'string' ? input.method : 'GET')).toUpperCase();
+  if (url.startsWith('/') && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
+    const headers = new Headers(init.headers || {});
+    headers.set('X-CSRF-Token', document.querySelector('meta[name="csrf-token"]')?.content || '');
+    init = { ...init, headers };
+  }
+  return originalFetch(input, init);
+};
+
 const app = createApp(App);
 
 /*

@@ -8,7 +8,9 @@
 """
 from __future__ import annotations
 
-from flask import Flask, request
+from flask import Flask, request, session as flask_session, jsonify
+import secrets
+import hmac
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 from . import bootstrap
@@ -34,13 +36,31 @@ def create_app(config_object=None) -> Flask:
 
     @app.before_request
     def _attach_owner():
+        if request.path in {"/api/upload-ecg", "/api/upload-ecg/analyze"}:
+            request.max_content_length = app.config["UPLOAD_MAX_CONTENT_LENGTH"]
+        else:
+            request.max_content_length = app.config["MAX_CONTENT_LENGTH"]
         # 静态资源请求不需要会话，避免给每个 js/css 都回一个 Set-Cookie
         if request.endpoint == "static":
             return
         bind_owner()
+        if app.config.get('ENFORCE_CSRF') and request.path.startswith('/api/') and request.method in {'POST', 'PUT', 'PATCH', 'DELETE'}:
+            expected = flask_session.get('_csrf_token')
+            supplied = request.headers.get('X-CSRF-Token', '')
+            if not expected or not hmac.compare_digest(expected, supplied):
+                return jsonify({'ok': False, 'error': 'CSRF 校验失败，请刷新页面后重试'}), 403
 
     _register_blueprints(app)
     _register_error_handlers(app)
+
+    @app.after_request
+    def _security_headers(response):
+        response.headers.setdefault('X-Content-Type-Options', 'nosniff')
+        response.headers.setdefault('X-Frame-Options', 'SAMEORIGIN')
+        response.headers.setdefault('Referrer-Policy', 'strict-origin-when-cross-origin')
+        if app.config.get('APP_ENV') == 'production':
+            response.headers.setdefault('Strict-Transport-Security', 'max-age=31536000; includeSubDomains')
+        return response
 
     # 启动装配（日志、线程数、数据库、模型热身）。
     # 测试环境下跳过模型热身：它会拖慢每个用例，且用例自己会按需加载。
@@ -55,9 +75,17 @@ def _register_blueprints(app: Flask) -> None:
     from .views.history_api import history_bp
     from .views.media import media_bp
     from .views.meta_api import meta_bp
+    from .views.research_api import research_bp
+    from .views.upload_api import upload_bp
+    from .views.auth_api import auth_bp
+    from .views.notifications_api import notifications_bp
     from .views.pages import page_bp
 
     app.register_blueprint(meta_bp)
+    app.register_blueprint(research_bp)
+    app.register_blueprint(upload_bp)
+    app.register_blueprint(auth_bp)
+    app.register_blueprint(notifications_bp)
     app.register_blueprint(analysis_bp)
     app.register_blueprint(history_bp)
     app.register_blueprint(media_bp)
