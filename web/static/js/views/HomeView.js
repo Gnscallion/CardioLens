@@ -50,21 +50,28 @@ export default {
   },
 
   template: `
-    <div>
+    <div class="home-view">
       <section class="hero">
-        <h1>{{ store.brand.name }} · {{ store.brand.name_zh }}</h1>
-        <p class="hero-sub">{{ store.brand.name_en }}</p>
-        <p class="lead">{{ store.brand.tagline }}</p>
-        <div class="tagrow">
-          <span class="tag">MIT-BIH 心律失常数据库</span>
-          <span class="tag">AAMI EC57 五分类</span>
-          <span class="tag">1D-CNN + RR 节律分支</span>
-          <span class="tag">Grad-CAM 可解释性</span>
-          <span class="tag">纯 CPU 推理</span>
+        <div class="hero-copy">
+          <p class="hero-kicker">CARDIAC SIGNAL INTELLIGENCE</p>
+          <h1>{{ store.brand.name }} · {{ store.brand.name_zh }}</h1>
+          <p class="hero-sub">{{ store.brand.name_en }}</p>
+          <p class="lead">{{ store.brand.tagline }}</p>
+          <div class="tagrow">
+            <span class="tag">MIT-BIH 心律失常数据库</span>
+            <span class="tag">AAMI EC57 五分类</span>
+            <span class="tag">1D-CNN + RR 节律分支</span>
+            <span class="tag">Grad-CAM 可解释性</span>
+            <span class="tag">纯 CPU 推理</span>
+          </div>
+          <div class="hero-actions">
+            <RouterLink class="btn btn-primary btn-lg" to="/analyze">开始分析</RouterLink>
+            <RouterLink class="btn btn-light btn-lg" to="/about">了解技术原理</RouterLink>
+          </div>
         </div>
-        <div class="hero-actions">
-          <RouterLink class="btn btn-light btn-lg" to="/analyze">开始分析</RouterLink>
-          <RouterLink class="btn btn-ghost btn-lg" to="/about">了解技术原理</RouterLink>
+        <div class="hero-art" aria-hidden="true">
+          <div class="hero-art-glow"></div>
+          <img src="/static/img/heart-hero.png" alt="" />
         </div>
       </section>
 

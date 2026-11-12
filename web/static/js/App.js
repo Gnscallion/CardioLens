@@ -84,6 +84,16 @@ export default {
       else if (event.key === 'Escape') { event.preventDefault(); searchFocused.value = false; }
     }
     function clearSearch() { searchText.value = ''; searchHighlighted.value = -1; }
+    function searchIcon(key) {
+      const icons = {
+        home: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z"/></svg>',
+        analyze: '<svg viewBox="0 0 24 24" aria-hidden="true" class="nav-icon-fill"><path d="M12 20.2S4.5 15.7 4.5 9.8A4.3 4.3 0 0 1 12 7.1a4.3 4.3 0 0 1 7.5 2.7c0 5.9-7.5 10.4-7.5 10.4Z"/></svg>',
+        history: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 7v5l3 2"/></svg>',
+        research: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v6l-5 9a2 2 0 0 0 1.7 3h10.6A2 2 0 0 0 19 18l-5-9V3M8 14h8"/></svg>',
+        about: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 10v6M12 7.5h.01"/></svg>',
+      };
+      return icons[key] || icons.home;
+    }
     function submitSearch() {
       if (!searchQuery.value) {
         searchFocused.value = true;
@@ -109,7 +119,7 @@ export default {
     return {
       store, NAV_ITEMS, activeNav, searchText, searchFocused, searchLoading,
       searchActionResults, searchHistoryResults, searchHighlighted, profileOpen, user, notifications, unreadNotifications, notificationsOpen,
-      activateSearch, closeSearchSoon, selectSearchResult, submitSearch, handleSearchKeydown, clearSearch,
+      activateSearch, closeSearchSoon, selectSearchResult, submitSearch, handleSearchKeydown, clearSearch, searchIcon,
       openActivity, openMessages, markNotification, markAllNotifications, logout,
     };
   },
@@ -128,7 +138,14 @@ export default {
           <RouterLink v-for="item in NAV_ITEMS" :key="item.key"
                       :to="item.to"
                       :class="{ on: activeNav === item.key }">
-            <span class="nav-icon">{{ ({home:'⌂', analyze:'⌁', history:'▤', about:'ⓘ', research:'◫', auth:'◉'})[item.key] }}</span>
+            <span class="nav-icon">
+              <svg v-if="item.key === 'home'" viewBox="0 0 24 24" aria-hidden="true"><path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1Z" /></svg>
+              <svg v-else-if="item.key === 'analyze'" viewBox="0 0 24 24" aria-hidden="true" class="nav-icon-fill"><path d="M12 20.2S4.5 15.7 4.5 9.8A4.3 4.3 0 0 1 12 7.1a4.3 4.3 0 0 1 7.5 2.7c0 5.9-7.5 10.4-7.5 10.4Z" /></svg>
+              <svg v-else-if="item.key === 'history'" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 7v5l3 2" /></svg>
+              <svg v-else-if="item.key === 'about'" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8" /><path d="M12 10v6M12 7.5h.01" /></svg>
+              <svg v-else-if="item.key === 'research'" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6M10 3v5.5L5.5 16A2 2 0 0 0 7.2 19h9.6a2 2 0 0 0 1.7-3L14 8.5V3M8 13h8" /></svg>
+              <svg v-else viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3" /><path d="M5 21a7 7 0 0 1 14 0" /></svg>
+            </span>
             <span>{{ item.label }}</span>
           </RouterLink>
         </nav>
@@ -149,7 +166,7 @@ export default {
                 <div class="search-panel" v-if="searchFocused">
                   <div class="search-panel-title">{{ searchQuery ? '搜索结果' : '快捷入口' }}</div>
                   <button v-for="item in searchActionResults" :key="item.key" type="button" class="search-result" @mousedown.prevent="selectSearchResult({ type: 'action', item })">
-                    <span class="search-result-icon">⌁</span><span><strong>{{ item.label }}</strong><small>{{ item.hint }}</small></span>
+                    <span class="search-result-icon" v-html="searchIcon(item.key)"></span><span><strong>{{ item.label }}</strong><small>{{ item.hint }}</small></span>
                   </button>
                   <div class="search-panel-title" v-if="searchHistoryResults.length">分析记录</div>
                   <button v-for="item in searchHistoryResults" :key="'history-' + item.id" type="button" class="search-result" @mousedown.prevent="selectSearchResult({ type: 'history', item })">

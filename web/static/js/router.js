@@ -56,7 +56,7 @@ export const NAV_ITEMS = [
   { key: 'home', to: '/', label: '首页' },
   { key: 'analyze', to: '/analyze', label: 'ECG 分析' },
   { key: 'history', to: '/history', label: '分析历史' },
-  { key: 'about', to: '/about', label: '关于' },
   { key: 'research', to: '/research', label: '科研实验' },
   { key: 'auth', to: '/auth', label: '登录 / 注册' },
+  { key: 'about', to: '/about', label: '关于' },
 ];

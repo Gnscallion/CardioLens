@@ -139,7 +139,7 @@ export default {
       <button class="btn btn-primary btn-block" :disabled="accountBusy" @click="changePassword">{{ accountBusy ? '保存中…' : '保存新密码' }}</button>
       <button class="btn btn-ghost btn-block mt16" @click="logout">退出登录</button>
     </div>
-    <div class="card" style="max-width:480px;margin:40px auto" v-else>
+    <div class="card auth-card" style="max-width:480px;margin:40px auto" v-else>
       <h1>{{ mode==='login'?'登录账号':'注册账号' }}</h1>
       <p class="muted">账号名在系统内唯一，密码仅保存为加盐哈希。</p>
       <div class="field"><label for="auth-user">账号名</label><input id="auth-user" v-model="username" autocomplete="username" placeholder="3-32 位账号名"></div>
@@ -155,8 +155,8 @@ export default {
       </div>
       <div class="alert alert-err" v-if="error">{{ error }}</div>
       <button class="btn btn-primary btn-block" :disabled="busy || (mode==='register' && !captchaQuestion)" @click="submit">{{ busy?'处理中…':(mode==='login'?'登录':'注册并登录') }}</button>
-      <button class="btn btn-ghost btn-block mt16" @click="switchMode">{{ mode==='login'?'没有账号？注册':'已有账号？登录' }}</button>
-      <button v-if="mode==='login'" class="btn btn-ghost btn-block" @click="resetMode=true">忘记密码？</button>
+      <button class="btn btn-ghost btn-block auth-secondary-btn" @click="switchMode">{{ mode==='login'?'没有账号？注册':'已有账号？登录' }}</button>
+      <button v-if="mode==='login'" class="btn btn-ghost btn-block auth-secondary-btn" @click="resetMode=true">忘记密码？</button>
     </div>
   `,
 };

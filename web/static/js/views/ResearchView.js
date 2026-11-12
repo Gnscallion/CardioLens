@@ -40,7 +40,7 @@ export default {
     return { store, confidenceThreshold, experiments, experimentName, runningId, jobStatus, report, downloadReport, createExperiment, runExperiment, pct, num };
   },
   template: `
-    <div>
+    <div class="research-view">
       <div class="hero"><h1>科研实验与可靠性评估</h1><p class="lead">围绕跨患者泛化、特征消融、置信度校准与错误案例开展可复现实验。</p><div class="tagrow"><span class="tag">Inter-patient validation</span><span class="tag">Ablation study</span><span class="tag">Uncertainty analysis</span></div></div>
       <div class="alert alert-info"><span class="ic">🔬</span><span><strong>研究定位</strong><br>本模块展示真实已有指标，并提供后续实验的配置入口；未运行的实验不会被伪造为结果。</span></div>
       <div class="grid grid-2">

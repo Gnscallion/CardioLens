@@ -453,6 +453,383 @@ td.num, th.num { text-align: right; font-family: var(--mono); }
   .stat .v { font-size: 1.4rem; }
 }
 
+/* --------------------------------------------------------------------------
+   Vitalora-inspired visual layer
+   Keeps the existing component/interaction contract while moving the product
+   toward a calmer, health-monitoring dashboard aesthetic.
+   -------------------------------------------------------------------------- */
+:root {
+  --brand: #2fa79f;
+  --brand-dark: #237f7a;
+  --brand-soft: #e8f7f5;
+  --accent: #7188dc;
+  --bg: #f3f7fb;
+  --surface: #ffffff;
+  --surface-alt: #f8fbfd;
+  --border: #e3edf3;
+  --border-soft: #edf3f7;
+  --text: #203247;
+  --text-mid: #60748a;
+  --text-soft: #9aaabd;
+  --ok: #22a688;
+  --warn: #d99a3d;
+  --danger: #db6d78;
+  --radius: 18px;
+  --radius-sm: 12px;
+  --shadow: 0 10px 28px rgba(45, 78, 108, .07);
+  --shadow-lg: 0 20px 50px rgba(45, 78, 108, .13);
+}
+
+body {
+  background: linear-gradient(180deg, #f8fbfd 0%, #f2f6fb 100%);
+  color: var(--text);
+}
+
+.sidebar {
+  background: rgba(255, 255, 255, .94);
+  border-right: 1px solid var(--border-soft);
+  box-shadow: 8px 0 28px rgba(46, 81, 111, .04);
+}
+
+.sidebar .brand-mark {
+  background: linear-gradient(135deg, #51c9be 0%, #7891e6 100%);
+  box-shadow: 0 8px 18px rgba(65, 153, 177, .22);
+}
+
+.sidebar .brand-text em {
+  color: var(--brand);
+}
+
+.nav a {
+  color: #6e8092;
+  border-radius: 12px;
+}
+
+.nav a:hover {
+  color: var(--brand-dark);
+  background: #f0f8f8;
+}
+
+.nav a.on {
+  color: var(--brand-dark);
+  background: linear-gradient(90deg, #e7f7f4 0%, #eef1ff 100%);
+  box-shadow: inset 3px 0 0 var(--brand);
+}
+
+.nav a.on svg,
+.nav a:hover svg {
+  color: var(--brand);
+}
+
+.topbar {
+  background: rgba(248, 251, 253, .88);
+  border-bottom: 1px solid rgba(227, 237, 243, .85);
+  backdrop-filter: blur(14px);
+}
+
+.top-search {
+  background: #fff;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 14px rgba(54, 86, 115, .04);
+}
+
+.top-search:focus-within {
+  border-color: rgba(47, 167, 159, .55);
+  box-shadow: 0 0 0 4px rgba(47, 167, 159, .11);
+}
+
+.top-action-btn:hover {
+  color: var(--brand-dark);
+  background: var(--brand-soft);
+}
+
+.page {
+  background: transparent;
+}
+
+.card,
+.panel,
+.stat,
+.dataset-card,
+.system-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, .94);
+}
+
+.card:hover,
+.dataset-card:hover {
+  box-shadow: 0 14px 34px rgba(45, 78, 108, .1);
+}
+
+.hero {
+  color: var(--text);
+  background: linear-gradient(135deg, #dff6f2 0%, #e7edff 62%, #f7fbff 100%);
+  border: 1px solid #d7e9ef;
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 38%);
+  align-items: center;
+  min-height: 360px;
+}
+
+.hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 720px;
+}
+
+.hero-kicker {
+  margin: 0 0 12px;
+  color: #4b8c97;
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.hero-art {
+  position: relative;
+  z-index: 1;
+  align-self: stretch;
+  min-height: 330px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-art img {
+  position: relative;
+  z-index: 2;
+  width: min(88%, 320px);
+  max-height: 350px;
+  object-fit: contain;
+  filter: drop-shadow(0 24px 28px rgba(88, 95, 159, .2));
+  transform: translateY(8px) rotate(4deg);
+}
+
+.hero-art-glow {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.9), rgba(124, 154, 224, .18) 58%, transparent 72%);
+  filter: blur(2px);
+}
+
+.hero-signal-pill {
+  position: absolute;
+  z-index: 3;
+  right: 5%;
+  bottom: 16%;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, .85);
+  border-radius: 999px;
+  color: #7d5a66;
+  background: rgba(255, 255, 255, .72);
+  box-shadow: 0 10px 24px rgba(68, 91, 117, .1);
+  font-size: .65rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  backdrop-filter: blur(10px);
+}
+
+.hero-signal-pill b {
+  color: var(--danger);
+  font-size: 1rem;
+  line-height: 0;
+}
+
+/* Final Vitalora palette correction: reserve red for clinical alerts only. */
+.sidebar .brand-mark { background: linear-gradient(135deg, #dff7f3 0%, #dfe8ff 100%) !important; box-shadow: 0 8px 18px rgba(65,153,177,.14) !important; }
+.sidebar .brand-mark svg, .sidebar .brand-mark i { color: #2fa79f !important; }
+.nav a.on { color: #237f7a !important; background: linear-gradient(90deg, #e5f7f4 0%, #eef1ff 100%) !important; box-shadow: inset 3px 0 0 #2fa79f !important; }
+.nav a.on svg, .nav a:hover svg { color: #2fa79f !important; }
+.hero { color: #203247 !important; background: linear-gradient(135deg, #e6f8f5 0%, #eaf0ff 56%, #f8fbff 100%) !important; border-color: #d4e9ee !important; }
+.hero h1, .hero h2, .hero .hero-sub, .hero p.lead { color: #29455f !important; }
+.hero .tag { color: #317c80 !important; background: rgba(255,255,255,.82) !important; border-color: rgba(47,167,159,.2) !important; }
+.hero .btn-primary { color: #fff !important; background: linear-gradient(135deg, #35b4a8 0%, #7188dc 100%) !important; }
+.hero .btn-light, .hero .btn-ghost { color: #2b6676 !important; background: rgba(255,255,255,.84) !important; border-color: #d6e7ed !important; }
+.hero .hero-signal-pill { color: #5c6e86 !important; }
+
+.hero::after {
+  background: radial-gradient(circle at 20% 20%, rgba(255,255,255,.84), transparent 42%),
+              linear-gradient(140deg, rgba(47,167,159,.12), rgba(113,136,220,.12));
+  opacity: 1;
+}
+
+.hero h1,
+.hero h2 {
+  color: #24405a;
+}
+
+.hero p,
+.hero .hero-sub {
+  color: #60778b;
+}
+
+.tag {
+  color: #317c80;
+  background: rgba(255, 255, 255, .72);
+  border: 1px solid rgba(47, 167, 159, .18);
+}
+
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #35b4a8 0%, #7188dc 100%);
+  box-shadow: 0 9px 20px rgba(74, 139, 191, .22);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #278f88 0%, #5d73c8 100%);
+  transform: translateY(-1px);
+}
+
+.btn-light,
+.btn-ghost {
+  color: #2b6676;
+  background: rgba(255, 255, 255, .82);
+  border: 1px solid #d6e7ed;
+}
+
+.btn-light:hover,
+.btn-ghost:hover {
+  color: var(--brand-dark);
+  background: #fff;
+  border-color: #a9d9d5;
+}
+
+.stat {
+  background: linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+}
+
+.stat .v {
+  color: #5874c9;
+}
+
+.stat.ok .v,
+.status-ok,
+.text-ok {
+  color: var(--ok);
+}
+
+.stat.warn .v,
+.text-warn {
+  color: var(--warn);
+}
+
+.card-head h2,
+.section-title,
+.panel-title {
+  color: #29435d;
+}
+
+.alert-info,
+.info-box {
+  background: #eef7fb;
+  border-color: #d6eaf1;
+  color: #4f7186;
+}
+
+.alert-success {
+  background: #eaf8f4;
+  border-color: #cceee4;
+}
+
+.alert-warning {
+  background: #fff8ea;
+  border-color: #f2dfb7;
+}
+
+.alert-danger {
+  background: #fff1f2;
+  border-color: #f1ced3;
+}
+
+.table-wrap,
+table {
+  border-color: var(--border);
+}
+
+th {
+  color: #597187;
+  background: #f6fafc;
+}
+
+td {
+  border-color: var(--border-soft);
+}
+
+input,
+select,
+textarea {
+  color: var(--text);
+  background: #fbfdff;
+  border-color: #dce8ef;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(47, 167, 159, .62);
+  box-shadow: 0 0 0 4px rgba(47, 167, 159, .1);
+}
+
+.wave-box,
+.waveform-card {
+  background: linear-gradient(135deg, #192b45 0%, #223b5c 100%);
+  border: 1px solid #385a76;
+  box-shadow: 0 14px 32px rgba(24, 47, 73, .15);
+}
+
+.upload-zone {
+  background: linear-gradient(135deg, #f5fbfb 0%, #f3f5ff 100%);
+  border-color: #b9dfdc;
+}
+
+.upload-zone:hover {
+  background: #eef9f7;
+  border-color: var(--brand);
+}
+
+.footer {
+  color: #8da0b2;
+  border-top-color: var(--border-soft);
+  background: rgba(255, 255, 255, .6);
+}
+
+@media (max-width: 760px) {
+  .hero {
+    border-radius: 16px;
+    grid-template-columns: 1fr;
+    min-height: 0;
+  }
+
+  .hero-art {
+    min-height: 240px;
+    margin-top: -8px;
+  }
+
+  .hero-art img {
+    width: min(78%, 280px);
+    max-height: 280px;
+  }
+
+  .hero-signal-pill {
+    right: 8%;
+    bottom: 8%;
+  }
+
+  .card,
+  .panel,
+  .stat,
+  .dataset-card,
+  .system-card {
+    border-radius: 14px;
+  }
+}
+
 /* ---------------------------------------------------------------- HR Dashboard visual system */
 :root {
   --brand: #f05d5e;
@@ -515,6 +892,18 @@ body { background: var(--bg); color: var(--text); }
 .search-result { width: 100%; display: flex; align-items: center; gap: 9px; padding: 8px; border: 0; border-radius: 7px; background: transparent; color: var(--text); text-align: left; cursor: pointer; }
 .search-result:hover, .search-result:focus-visible { background: var(--brand-soft); outline: 0; }
 .search-result-icon { width: 22px; color: var(--brand); font-size: 1rem; text-align: center; }
+.search-result-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+  margin: 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.search-result-icon svg.nav-icon-fill { stroke: none; fill: currentColor; }
 .search-result strong, .search-result small { display: block; }
 .search-result strong { font-size: .76rem; font-weight: 700; }
 .search-result small { margin-top: 2px; color: var(--text-soft); font-size: .68rem; }
@@ -595,4 +984,813 @@ body { background: var(--bg); color: var(--text); }
 .captcha-question { min-width: 112px; padding: 0 13px; color: var(--brand); background: var(--brand-soft); border: 1px solid #f2c2c2; border-radius: var(--radius-sm); font: 700 .9rem var(--mono); cursor: pointer; }
 .captcha-question:hover { background: #ffe4e1; }
 .captcha-question:disabled { opacity: .6; cursor: wait; }
+
+/* Interaction palette: all normal hover states use Vitalora's teal/lavender system. */
+.btn:not(.btn-danger):not(.btn-warning):not([disabled]) { transition: color .18s ease, background .18s ease, border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.btn-primary:not(.btn-danger):hover, .btn-primary:not(.btn-danger):focus-visible { color: #fff !important; background: linear-gradient(135deg, #2fa79f 0%, #7188dc 100%) !important; box-shadow: 0 9px 22px rgba(79,132,190,.24) !important; }
+.btn-light:hover, .btn-light:focus-visible, .btn-ghost:hover, .btn-ghost:focus-visible, .btn-outline:hover, .btn-outline:focus-visible { color: #237f7a !important; background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important; border-color: #9bd5d0 !important; box-shadow: 0 7px 18px rgba(74,137,172,.12) !important; }
+.top-action-btn:hover, .top-action-btn:focus-visible, .profile:hover, .profile:focus-visible { color: #237f7a !important; background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important; }
+.profile-menu a:hover, .profile-menu button:hover, .notification-item:hover, .notification-item.unread { color: #237f7a !important; background: linear-gradient(135deg, #f0faf8 0%, #f3f4ff 100%) !important; }
+.sample-card:hover { border-color: #9bd5d0 !important; background: linear-gradient(135deg, #f5fcfb 0%, #f6f7ff 100%) !important; box-shadow: 0 8px 18px rgba(74,137,172,.12) !important; }
+.sample-card.on { color: #237f7a !important; border-color: #2fa79f !important; background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important; box-shadow: inset 0 0 0 1px #2fa79f, 0 8px 18px rgba(74,137,172,.1) !important; }
+.captcha-question:hover, .search-result:hover, .card-interactive:hover { color: #237f7a !important; background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important; border-color: #9bd5d0 !important; }
+a:not(.btn):hover { color: #237f7a !important; }
+[data-tooltip]::after, .tooltip { background: linear-gradient(135deg, #203b55 0%, #3f4f86 100%) !important; border-color: rgba(151,219,211,.28) !important; box-shadow: 0 10px 24px rgba(40,68,99,.2) !important; }
+
+/* Replace legacy red button treatment across all views. */
+.btn-danger,
+.btn-danger:hover,
+.btn-danger:focus-visible,
+button.danger,
+button.danger:hover,
+button.danger:focus-visible,
+.clear-all,
+.clear-all:hover,
+.clear-all:focus-visible {
+  color: #237f7a !important;
+  background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important;
+  border-color: #b9dfdc !important;
+  box-shadow: 0 7px 18px rgba(74,137,172,.1) !important;
+}
+
+.btn-danger:hover,
+button.danger:hover,
+.clear-all:hover {
+  border-color: #2fa79f !important;
+  box-shadow: 0 9px 22px rgba(74,137,172,.16) !important;
+  transform: translateY(-1px);
+}
+
+.empty-state .btn,
+.history-empty .btn,
+.about-link,
+.about-link:hover,
+.about-link:focus-visible {
+  color: #237f7a !important;
+  background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important;
+  border-color: #b9dfdc !important;
+  box-shadow: 0 7px 18px rgba(74,137,172,.1) !important;
+}
+
+.notification-head button:hover,
+.notification-head button:focus-visible {
+  color: #237f7a !important;
+  background: #e5f7f4 !important;
+}
+
+/* Lock every visual state of regular buttons to the Vitalora palette. */
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:focus,
+.btn-primary:focus-visible,
+.btn-primary:visited {
+  color: #fff !important;
+  background: linear-gradient(135deg, #2fa79f 0%, #7188dc 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 9px 22px rgba(79,132,190,.22) !important;
+}
+
+.btn-danger,
+.btn-danger:hover,
+.btn-danger:active,
+.btn-danger:focus,
+.btn-danger:focus-visible,
+.btn-danger:visited,
+.btn-light,
+.btn-light:hover,
+.btn-light:active,
+.btn-light:focus,
+.btn-light:focus-visible,
+.btn-light:visited,
+.btn-ghost,
+.btn-ghost:hover,
+.btn-ghost:active,
+.btn-ghost:focus,
+.btn-ghost:focus-visible,
+.btn-ghost:visited,
+.btn-outline,
+.btn-outline:hover,
+.btn-outline:active,
+.btn-outline:focus,
+.btn-outline:focus-visible,
+.btn-outline:visited,
+.clear-all,
+.clear-all:hover,
+.clear-all:active,
+.clear-all:focus,
+.clear-all:focus-visible {
+  color: #237f7a !important;
+  background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important;
+  border-color: #b9dfdc !important;
+  box-shadow: 0 7px 18px rgba(74,137,172,.1) !important;
+}
+
+.btn-danger:active,
+.btn-light:active,
+.btn-ghost:active,
+.btn-outline:active,
+.clear-all:active {
+  transform: translateY(0) !important;
+  box-shadow: inset 0 2px 5px rgba(62,112,133,.12), 0 4px 10px rgba(74,137,172,.08) !important;
+}
+
+button:not(.alert-close):not([disabled]):active,
+a.btn:active {
+  outline: none;
+}
+
+/* Remove the remaining coral accents from dataset labels, avatar and sidebar hover. */
+.sample-top b,
+.sample-card.on > em {
+  color: #2f8f8b !important;
+}
+
+.sample-card.on > em {
+  background: linear-gradient(90deg, #2fa79f, #7188dc);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.avatar {
+  color: #fff !important;
+  background: linear-gradient(135deg, #2fa79f 0%, #7188dc 100%) !important;
+  box-shadow: 0 7px 16px rgba(74,137,172,.2) !important;
+}
+
+.nav a:hover,
+.nav a:focus-visible {
+  color: #237f7a !important;
+  background: linear-gradient(135deg, #e5f7f4 0%, #eef1ff 100%) !important;
+}
+
+.nav a:hover svg,
+.nav a:focus-visible svg {
+  color: #2fa79f !important;
+}
+
+.notification-badge {
+  background: linear-gradient(135deg, #2fa79f 0%, #7188dc 100%) !important;
+}
+
+/* Soft Vitalora shadows and clear hover/pressed hierarchy. */
+.hero {
+  box-shadow: 0 18px 42px rgba(47, 167, 159, .10), 0 18px 48px rgba(113, 136, 220, .12) !important;
+}
+
+.hero .tag,
+.hero .hero-signal-pill,
+.hero .btn,
+.sample-card,
+.card,
+.panel,
+.stat {
+  box-shadow: 0 8px 22px rgba(47, 167, 159, .06), 0 8px 24px rgba(113, 136, 220, .06) !important;
+}
+
+.hero .tag {
+  transition: background .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.hero .tag:hover {
+  background: linear-gradient(135deg, #f5fdfb 0%, #f7f8ff 100%) !important;
+  box-shadow: 0 7px 18px rgba(47, 167, 159, .08), 0 7px 18px rgba(113, 136, 220, .08) !important;
+  transform: translateY(-1px);
+}
+
+.btn-primary,
+.btn-primary:visited {
+  background: linear-gradient(135deg, #2fa79f 0%, #7188dc 100%) !important;
+  box-shadow: 0 9px 24px rgba(47, 167, 159, .18), 0 9px 24px rgba(113, 136, 220, .16) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  background: linear-gradient(135deg, #8fd9d3 0%, #b5c0f0 100%) !important;
+  color: #285f72 !important;
+  box-shadow: 0 7px 18px rgba(47, 167, 159, .10), 0 7px 18px rgba(113, 136, 220, .10) !important;
+}
+
+.btn-primary:active {
+  background: linear-gradient(135deg, #278f88 0%, #5e72c8 100%) !important;
+  color: #fff !important;
+  box-shadow: inset 0 3px 7px rgba(28, 91, 104, .22), 0 4px 12px rgba(74, 137, 172, .12) !important;
+}
+
+.btn-light,
+.btn-ghost,
+.btn-outline,
+.btn-danger,
+.clear-all {
+  background: linear-gradient(135deg, #f8fdfc 0%, #f8f9ff 100%) !important;
+  box-shadow: 0 7px 18px rgba(47, 167, 159, .07), 0 7px 18px rgba(113, 136, 220, .07) !important;
+}
+
+.btn-light:hover,
+.btn-ghost:hover,
+.btn-outline:hover,
+.btn-danger:hover,
+.clear-all:hover,
+.btn-light:focus-visible,
+.btn-ghost:focus-visible,
+.btn-outline:focus-visible,
+.btn-danger:focus-visible,
+.clear-all:focus-visible {
+  background: linear-gradient(135deg, #f4fcfa 0%, #f5f6ff 100%) !important;
+  box-shadow: 0 6px 16px rgba(47, 167, 159, .08), 0 6px 16px rgba(113, 136, 220, .08) !important;
+}
+
+.btn-light:active,
+.btn-ghost:active,
+.btn-outline:active,
+.btn-danger:active,
+.clear-all:active {
+  background: linear-gradient(135deg, #dff5f1 0%, #e4e8ff 100%) !important;
+  box-shadow: inset 0 3px 7px rgba(62, 112, 133, .14), 0 4px 10px rgba(74, 137, 172, .08) !important;
+}
+
+.nav a:hover,
+.nav a:focus-visible {
+  background: linear-gradient(135deg, #f4fcfa 0%, #f7f7ff 100%) !important;
+  box-shadow: 0 5px 14px rgba(47, 167, 159, .06), 0 5px 14px rgba(113, 136, 220, .06) !important;
+}
+
+.nav a.on,
+.nav a.on:hover,
+.nav a.on:focus-visible {
+  background: linear-gradient(135deg, #e1f6f2 0%, #e5e9ff 100%) !important;
+  box-shadow: inset 3px 0 0 #2fa79f, 0 7px 18px rgba(47, 167, 159, .10), 0 7px 18px rgba(113, 136, 220, .10) !important;
+}
+
+/* Vitalora reference palette: warm white, berry pink, black controls. */
+:root {
+  --brand: #b44573 !important;
+  --brand-dark: #8e2d59 !important;
+  --brand-soft: #fff0f5 !important;
+  --accent: #e7a8bf !important;
+  --bg: #f7faf9 !important;
+  --surface: #ffffff !important;
+  --surface-alt: #f5f6f5 !important;
+  --border: #e5e7e8 !important;
+  --border-soft: #eef0ef !important;
+  --text: #17171b !important;
+  --text-mid: #74777c !important;
+  --text-soft: #a5a8ad !important;
+  --shadow: 0 10px 28px rgba(24, 28, 31, .07) !important;
+  --shadow-lg: 0 18px 45px rgba(180, 69, 115, .13) !important;
+}
+
+body {
+  color: #17171b !important;
+  background: #f7faf9 !important;
+}
+
+.sidebar,
+.topbar {
+  background: rgba(255, 255, 255, .94) !important;
+  border-color: #e8eaeb !important;
+}
+
+.sidebar .brand-mark {
+  background: #f8dce7 !important;
+  box-shadow: 0 8px 18px rgba(180, 69, 115, .16) !important;
+}
+
+.sidebar .brand-mark svg,
+.sidebar .brand-mark i {
+  color: #b44573 !important;
+}
+
+.sidebar .brand-text strong { color: #17171b !important; }
+.sidebar .brand-text em { color: #b44573 !important; }
+
+.nav a:hover,
+.nav a:focus-visible {
+  color: #a23867 !important;
+  background: #fff7fa !important;
+  box-shadow: 0 5px 14px rgba(180, 69, 115, .07) !important;
+}
+
+.nav a.on,
+.nav a.on:hover,
+.nav a.on:focus-visible {
+  color: #a23867 !important;
+  background: #fdebf2 !important;
+  box-shadow: inset 3px 0 0 #b44573, 0 7px 18px rgba(180, 69, 115, .1) !important;
+}
+
+.nav a.on svg,
+.nav a:hover svg { color: #b44573 !important; }
+
+.top-search:focus-within {
+  border-color: #d887a7 !important;
+  box-shadow: 0 0 0 4px rgba(180, 69, 115, .1) !important;
+}
+
+.top-action-btn:hover,
+.top-action-btn:focus-visible,
+.profile:hover,
+.profile:focus-visible {
+  color: #a23867 !important;
+  background: #fff0f5 !important;
+}
+
+.avatar {
+  color: #fff !important;
+  background: #17171b !important;
+  box-shadow: 0 0 0 4px #f8dce7 !important;
+}
+
+.hero {
+  color: #17171b !important;
+  background: linear-gradient(135deg, #fbfdfd 0%, #fff8fb 100%) !important;
+  border-color: #e7ebeb !important;
+  box-shadow: 0 18px 42px rgba(180, 69, 115, .11) !important;
+}
+
+.hero::after {
+  background: radial-gradient(circle at 80% 25%, rgba(248, 220, 231, .72), transparent 34%) !important;
+}
+
+.hero h1,
+.hero h2,
+.hero .hero-sub,
+.hero p.lead { color: #17171b !important; }
+.hero-kicker { color: #b44573 !important; }
+
+.hero .tag {
+  color: #8e2d59 !important;
+  background: #fff !important;
+  border-color: #f0c9d8 !important;
+  box-shadow: 0 7px 18px rgba(180, 69, 115, .07) !important;
+}
+
+.hero .tag:hover {
+  color: #8e2d59 !important;
+  background: #fff7fa !important;
+  border-color: #d887a7 !important;
+}
+
+.hero .btn-primary,
+.btn-primary,
+.btn-primary:visited {
+  color: #fff !important;
+  background: #17171b !important;
+  border-color: #17171b !important;
+  box-shadow: 0 10px 22px rgba(23, 23, 27, .16) !important;
+}
+
+.hero .btn-primary:hover,
+.btn-primary:hover,
+.btn-primary:focus-visible {
+  color: #fff !important;
+  background: #b44573 !important;
+  border-color: #b44573 !important;
+  box-shadow: 0 8px 18px rgba(180, 69, 115, .16) !important;
+}
+
+.hero .btn-primary:active,
+.btn-primary:active {
+  color: #fff !important;
+  background: #8e2d59 !important;
+  border-color: #8e2d59 !important;
+}
+
+.hero .btn-light,
+.hero .btn-ghost,
+.btn-light,
+.btn-ghost,
+.btn-outline,
+.btn-danger,
+.clear-all {
+  color: #8e2d59 !important;
+  background: #fff !important;
+  border-color: #efc7d6 !important;
+  box-shadow: 0 7px 18px rgba(180, 69, 115, .07) !important;
+}
+
+.hero .btn-light:hover,
+.hero .btn-ghost:hover,
+.btn-light:hover,
+.btn-ghost:hover,
+.btn-outline:hover,
+.btn-danger:hover,
+.clear-all:hover {
+  color: #8e2d59 !important;
+  background: #fff7fa !important;
+  border-color: #d887a7 !important;
+  box-shadow: 0 6px 16px rgba(180, 69, 115, .09) !important;
+}
+
+.hero .btn-light:active,
+.hero .btn-ghost:active,
+.btn-light:active,
+.btn-ghost:active,
+.btn-outline:active,
+.btn-danger:active,
+.clear-all:active {
+  color: #8e2d59 !important;
+  background: #f8dce7 !important;
+  border-color: #d887a7 !important;
+}
+
+.card,
+.panel,
+.stat,
+.dataset-card,
+.system-card,
+.sample-card { background: #fff !important; border-color: #e5e7e8 !important; }
+
+.sample-card:hover { background: #fff7fa !important; border-color: #d887a7 !important; box-shadow: 0 8px 18px rgba(180, 69, 115, .09) !important; }
+.sample-card.on { color: #8e2d59 !important; background: #fdebf2 !important; border-color: #b44573 !important; }
+.sample-top b, .sample-card.on > em { color: #b44573 !important; }
+
+.badge-ok, .status-ok, .text-ok { color: #3f8a67 !important; }
+.notification-badge { background: #b44573 !important; }
+
+input:focus, select:focus, textarea:focus { border-color: #d887a7 !important; box-shadow: 0 0 0 4px rgba(180,69,115,.1) !important; }
+a:not(.btn):hover { color: #a23867 !important; }
+
+/* Final pink adjustments from the Vitalora reference. */
+.avatar {
+  color: #8e2d59 !important;
+  background: #f8dce7 !important;
+  box-shadow: 0 0 0 4px #fff0f5, 0 7px 16px rgba(180,69,115,.14) !important;
+}
+
+.btn-primary,
+.btn-primary:visited,
+.hero .btn-primary {
+  color: #8e2d59 !important;
+  background: #f8dce7 !important;
+  border-color: #efc1d2 !important;
+  box-shadow: 0 9px 22px rgba(180,69,115,.12) !important;
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible,
+.hero .btn-primary:hover,
+.hero .btn-primary:focus-visible,
+.btn-light:hover,
+.btn-ghost:hover,
+.btn-outline:hover,
+.btn-danger:hover,
+.clear-all:hover,
+.sample-card:hover,
+.nav a:hover,
+.nav a:focus-visible {
+  color: #8e2d59 !important;
+  background: #faeef3 !important;
+  border-color: #edcbd8 !important;
+  box-shadow: 0 8px 20px rgba(180,69,115,.09) !important;
+}
+
+.btn-primary:active,
+.hero .btn-primary:active,
+.btn-light:active,
+.btn-ghost:active,
+.btn-outline:active,
+.btn-danger:active,
+.clear-all:active,
+.sample-card:active {
+  color: #8e2d59 !important;
+  background: #f3dce7 !important;
+  border-color: #dca9bd !important;
+  box-shadow: inset 0 3px 7px rgba(142,45,89,.1) !important;
+}
+
+/* Selected dataset cards use a pink border one step darker than the background. */
+.sample-card.on,
+.sample-card.on:hover,
+.sample-card.on:focus-visible {
+  color: #8e2d59 !important;
+  background: #faeef3 !important;
+  border: 1px solid #d887a7 !important;
+  box-shadow: 0 7px 18px rgba(180,69,115,.1), inset 0 0 0 1px #efc1d2 !important;
+}
+
+.sample-card.on > em {
+  color: #3f8a9a !important;
+  -webkit-text-fill-color: #3f8a9a !important;
+}
+
+/* Primary button hover must match the requested pale-pink interaction state. */
+.btn-primary:hover,
+.btn-primary:focus-visible,
+.hero .btn-primary:hover,
+.hero .btn-primary:focus-visible {
+  color: #8e2d59 !important;
+  background: #faeef3 !important;
+  border-color: #edcbd8 !important;
+  box-shadow: 0 8px 20px rgba(180,69,115,.09) !important;
+}
+
+.btn-primary:active,
+.hero .btn-primary:active {
+  color: #8e2d59 !important;
+  background: #f3dce7 !important;
+  border-color: #dca9bd !important;
+  box-shadow: inset 0 3px 7px rgba(142,45,89,.1) !important;
+}
+
+/* Brand typography follows the calm Vitalora palette. */
+.sidebar .brand-text strong {
+  color: #203247 !important;
+}
+
+.sidebar .brand-text em {
+  color: #2f8f8b !important;
+}
+
+/* Hard override for the analysis CTA: remove all legacy gradient layers. */
+.btn.btn-primary:hover,
+.btn.btn-primary:focus,
+.btn.btn-primary:focus-visible,
+.hero .btn.btn-primary:hover,
+.hero .btn.btn-primary:focus,
+.hero .btn.btn-primary:focus-visible {
+  color: #8e2d59 !important;
+  background: #faeef3 !important;
+  background-image: none !important;
+  border-color: #edcbd8 !important;
+  box-shadow: 0 8px 20px rgba(180,69,115,.09) !important;
+}
+
+.btn.btn-primary:active,
+.hero .btn.btn-primary:active {
+  color: #8e2d59 !important;
+  background: #f3dce7 !important;
+  background-image: none !important;
+  border-color: #dca9bd !important;
+  box-shadow: inset 0 3px 7px rgba(142,45,89,.1) !important;
+}
+
+/* Final audit: no legacy teal, violet or coral hover backgrounds remain. */
+.chip:hover,
+.search-result:hover,
+.search-result:focus-visible,
+.upload-zone:hover,
+.captcha-question:hover,
+.card-interactive:hover,
+.notification-item:hover,
+.notification-item.unread,
+.profile-menu a:hover,
+.profile-menu button:hover,
+.top-action-btn:hover,
+.top-action-btn:focus-visible,
+.profile:hover,
+.profile:focus-visible,
+.sample-card:hover,
+.hero .tag:hover {
+  color: #8e2d59 !important;
+  background: #faeef3 !important;
+  background-image: none !important;
+  border-color: #edcbd8 !important;
+  box-shadow: 0 7px 18px rgba(180,69,115,.09) !important;
+}
+
+.nav a:hover,
+.nav a:focus-visible {
+  color: #8e2d59 !important;
+  background: #faeef3 !important;
+  background-image: none !important;
+  box-shadow: 0 7px 18px rgba(180,69,115,.09) !important;
+}
+
+.search-clear:hover,
+.side-support:hover,
+.notification-head button:hover,
+.profile-menu a:hover,
+.profile-menu button:hover,
+a:not(.btn):hover {
+  color: #b44573 !important;
+}
+
+tbody tr:hover {
+  background: #fff8fb !important;
+}
+
+/* Result actions: keep export/save controls in the Vitalora pink palette in
+   every browser state, including keyboard focus, mouse press, and disabled
+   "saved" state. */
+.btn.btn-ghost,
+.btn.btn-ghost:hover,
+.btn.btn-ghost:focus,
+.btn.btn-ghost:focus-visible,
+.btn.btn-ghost:active,
+.btn.btn-ghost:visited,
+.btn.btn-ghost[disabled],
+.btn.btn-primary[disabled],
+.btn.btn-primary.saved,
+.btn.btn-primary[aria-pressed="true"] {
+  color: #8e2d59 !important;
+  background: #faeef3 !important;
+  background-image: none !important;
+  border-color: #edcbd8 !important;
+  box-shadow: 0 7px 18px rgba(180,69,115,.09) !important;
+}
+
+.btn.btn-ghost:active,
+.btn.btn-ghost:focus:active,
+.btn.btn-primary:active,
+.btn.btn-primary:focus:active {
+  color: #8e2d59 !important;
+  background: #f3dce7 !important;
+  background-image: none !important;
+  border-color: #dca9bd !important;
+  box-shadow: inset 0 3px 7px rgba(142,45,89,.1) !important;
+}
+
+/* Auth forms: larger rounded-rectangle fields for account and password input. */
+.card[style*="max-width:480px"] input[type="text"],
+.card[style*="max-width:480px"] input[type="password"],
+.card[style*="max-width:480px"] input[type="email"],
+.card[style*="max-width:480px"] input:not([type]) {
+  width: 100%;
+  min-height: 64px;
+  padding: 14px 18px;
+  border: 2px solid #dfe3e8;
+  border-radius: 18px;
+  background: #fff;
+  color: #17171b;
+  font-size: 1.12rem;
+  line-height: 1.35;
+  box-sizing: border-box;
+}
+
+.card[style*="max-width:480px"] input[type="text"]:focus,
+.card[style*="max-width:480px"] input[type="password"]:focus,
+.card[style*="max-width:480px"] input[type="email"]:focus,
+.card[style*="max-width:480px"] input:not([type]):focus {
+  border-color: #d887a7 !important;
+  box-shadow: 0 0 0 4px rgba(180,69,115,.12) !important;
+}
+
+.card[style*="max-width:480px"] input::placeholder {
+  color: #8e929b;
+}
+
+/* Explicit auth-field selectors override the browser's default input frame. */
+#auth-user,
+#auth-password,
+#auth-email,
+#reset-account,
+#reset-token,
+#reset-password,
+#current-password,
+#new-password {
+  width: 100% !important;
+  min-height: 52px !important;
+  padding: 10px 14px !important;
+  box-sizing: border-box !important;
+  appearance: none !important;
+  border: 2px solid #dfe3e8 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  color: #17171b !important;
+  font-size: 1rem !important;
+  line-height: 1.35 !important;
+}
+
+#auth-user:focus,
+#auth-password:focus,
+#auth-email:focus,
+#reset-account:focus,
+#reset-token:focus,
+#reset-password:focus,
+#current-password:focus,
+#new-password:focus {
+  outline: none !important;
+  border-color: #d887a7 !important;
+  box-shadow: 0 0 0 4px rgba(180,69,115,.12) !important;
+}
+
+/* Move the sidebar system-help entry slightly upward for a tighter footer. */
+.sidebar-bottom .side-support {
+  position: relative;
+  top: -8px;
+}
+
+/* Lift the complete sidebar menu block while leaving the brand header fixed. */
+@media (min-width: 761px) {
+  .sidebar > .side-caption,
+  .sidebar > .nav,
+  .sidebar > .sidebar-bottom {
+    position: relative;
+    top: -10px;
+  }
+}
+
+/* Keep the ECG heart glyph as visually strong as the home glyph. */
+.nav a .nav-icon {
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 25px;
+  line-height: 1;
+}
+
+.nav a .nav-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.nav a .nav-icon svg.nav-icon-fill {
+  stroke: none;
+  fill: currentColor;
+}
+
+.sidebar > .nav a {
+  gap: 10px;
+  padding: 9px 12px;
+  font-size: .84rem;
+}
+
+/* Fine-tune the four requested areas. */
+.home-view > .hero {
+  padding: 38px 34px;
+}
+
+.home-view > .hero h1 {
+  font-size: 2.15rem !important;
+}
+
+.home-view > .hero .hero-art img {
+  width: min(82%, 292px);
+  max-height: 325px;
+}
+
+.research-view > .hero {
+  display: block;
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
+  padding: 20px 32px;
+  min-height: 0;
+}
+
+.research-view > .hero h1 {
+  font-size: 2.05rem !important;
+}
+
+.research-view > .hero .lead {
+  font-size: .94rem !important;
+  max-width: 920px;
+  margin: 8px 0 0;
+}
+
+.research-view > .hero .tag {
+  padding: 5px 12px;
+  font-size: .76rem;
+}
+
+.research-view > .hero .tagrow {
+  margin-top: 14px;
+}
+
+.card[style*="max-width:480px"] > h1 {
+  font-size: 2.1rem !important;
+}
+
+.card[style*="max-width:480px"] .btn-block + .btn-block {
+  margin-top: 14px !important;
+}
+
+/* Keep the two secondary auth actions visibly separated. */
+.auth-card .auth-secondary-btn {
+  display: block;
+  margin-top: 14px !important;
+}
+
+.auth-card .auth-secondary-btn + .auth-secondary-btn {
+  margin-top: 18px !important;
+}
+
+/* Slightly reduce the home hero as a whole, including its bordered backdrop. */
+@media (min-width: 761px) {
+  .home-view > .hero {
+    width: calc(100% - 20px);
+    margin-left: auto;
+    margin-right: auto;
+    padding: 34px 30px;
+    min-height: 340px;
+  }
+
+  .home-view > .hero h1 { font-size: 2.05rem !important; }
+  .home-view > .hero .hero-art img {
+    width: min(78%, 280px);
+    max-height: 310px;
+  }
+}
 .notification-wrap{position:relative}.notification-badge{position:absolute;top:-4px;right:-4px;background:#e85d5d;color:#fff;border-radius:999px;min-width:16px;height:16px;font-size:10px;line-height:16px;text-align:center}.notification-panel{position:absolute;right:0;top:46px;width:320px;background:var(--surface,#fff);border:1px solid var(--line,#e5e7eb);border-radius:14px;box-shadow:0 14px 35px rgba(20,30,50,.16);z-index:20;padding:10px}.notification-head{display:flex;justify-content:space-between;align-items:center;padding:4px 8px 10px}.notification-head button{border:0;background:none;color:var(--primary,#e85d5d);cursor:pointer}.notification-item{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;border:0;border-radius:10px;background:transparent;padding:10px;cursor:pointer}.notification-item:hover,.notification-item.unread{background:var(--soft,#f7f8fb)}.notification-item span,.notification-item small{color:#8b909c;font-size:12px}.notification-empty{color:#8b909c;padding:24px;text-align:center}
